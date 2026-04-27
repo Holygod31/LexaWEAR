@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/tab_care"
+        android:icon="@android:drawable/ic_menu_help"
+        android:title="Care"
+        android:contentDescription="Care instructions tab" />
+    <item
+        android:id="@+id/tab_nfc"
+        android:icon="@android:drawable/ic_menu_share"
+        android:title="NFC Tag"
+        android:contentDescription="Read or write NFC tag" />
+    <item
+        android:id="@+id/tab_wardrobe"
+        android:icon="@android:drawable/ic_menu_agenda"
+        android:title="Wardrobe"
+        android:contentDescription="Manage your wardrobe" />
+</menu>
