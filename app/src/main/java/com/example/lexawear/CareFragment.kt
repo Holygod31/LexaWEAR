@@ -1,22 +1,207 @@
 package com.example.lexawear
 
+import android.nfc.NfcAdapter
+import android.nfc.Tag
+import android.nfc.tech.Ndef
+import android.nfc.NdefRecord
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 
 class CareFragment : Fragment() {
+
+    private lateinit var tvStatus: TextView
+    private lateinit var btnScan: Button
+    private lateinit var layoutResults: LinearLayout
+
+    private var nfcAdapter: NfcAdapter? = null
+    private var isScanning = false
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
-        val tv = TextView(requireContext()).apply {
-            text = "Care Instructions"
-            textSize = 24f
-            contentDescription = "Care instructions screen. Scan an NFC tag to read care info."
-            setPadding(48, 48, 48, 48)
+        val view = inflater.inflate(R.layout.fragment_care, container, false)
+
+        tvStatus = view.findViewById(R.id.tv_care_status)
+        btnScan = view.findViewById(R.id.btn_care_scan)
+        layoutResults = view.findViewById(R.id.layout_care_results)
+
+        nfcAdapter = NfcAdapter.getDefaultAdapter(requireContext())
+
+        when {
+            nfcAdapter == null -> updateStatus("This device does not support NFC.")
+            !nfcAdapter!!.isEnabled -> updateStatus("NFC is off. Please enable it in Settings.")
+            else -> updateStatus("Scan a tag to see care instructions.")
         }
-        return tv
+
+        btnScan.setOnClickListener {
+            isScanning = true
+            updateStatus("Hold your phone to a clothing tag.")
+            tvStatus.announceForAccessibility("Hold your phone to a clothing tag.")
+        }
+
+        return view
+    }
+
+    fun onTagDiscovered(tag: Tag) {
+        if (!isScanning) return
+        readTag(tag)
+    }
+
+    private fun readTag(tag: Tag) {
+        try {
+            val ndef = Ndef.get(tag)
+            if (ndef == null) {
+                requireActivity().runOnUiThread {
+                    updateStatus("Tag is empty or unreadable.")
+                    tvStatus.announceForAccessibility("Tag is empty or unreadable.")
+                }
+                return
+            }
+
+            ndef.connect()
+            val message = ndef.ndefMessage
+            ndef.close()
+
+            if (message == null) {
+                requireActivity().runOnUiThread {
+                    updateStatus("Tag is empty.")
+                    tvStatus.announceForAccessibility("Tag is empty.")
+                }
+                return
+            }
+
+            val raw = message.records
+                .filter { it.tnf == NdefRecord.TNF_WELL_KNOWN }
+                .mapNotNull { String(it.payload).drop(3) }
+                .joinToString("")
+
+            val fields = parseTagData(raw)
+
+            requireActivity().runOnUiThread {
+                displayCareInfo(fields)
+                isScanning = false
+
+                // Build accessibility announcement
+                val announcement = fields.entries.joinToString(". ") { "${it.key}: ${it.value}" }
+                tvStatus.announceForAccessibility("Tag read. $announcement")
+            }
+
+        } catch (e: Exception) {
+            requireActivity().runOnUiThread {
+                updateStatus("Error reading tag: ${e.message}")
+            }
+        }
+    }
+
+    private fun parseTagData(raw: String): Map<String, String> {
+        val labelMap = mapOf(
+            "N" to "Item",
+            "M" to "Material",
+            "W" to "Wash",
+            "D" to "Drying",
+            "I" to "Ironing",
+            "B" to "Bleaching",
+            "C" to "Dry Clean",
+            "X" to "Notes"
+        )
+        val result = linkedMapOf<String, String>()
+        raw.split("|").forEach { part ->
+            val key = part.substringBefore(":")
+            val value = part.substringAfter(":")
+            val label = labelMap[key]
+            if (label != null && value.isNotEmpty()) {
+                result[label] = value
+            }
+        }
+        return result
+    }
+
+    private fun displayCareInfo(fields: Map<String, String>) {
+        layoutResults.removeAllViews()
+
+        if (fields.isEmpty()) {
+            updateStatus("No care data found on this tag.")
+            return
+        }
+
+        updateStatus("Tag read successfully.")
+        layoutResults.visibility = View.VISIBLE
+
+        fields.forEach { (label, value) ->
+            val row = layoutInflater.inflate(
+                android.R.layout.simple_list_item_2,
+                layoutResults,
+                false
+            )
+
+            // Card container
+            val card = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(16, 20, 16, 20)
+                background = ContextCompat.getDrawable(
+                    requireContext(),
+                    R.drawable.result_background
+                )
+                val params = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                params.setMargins(0, 0, 0, 12)
+                layoutParams = params
+                contentDescription = "$label: $value"
+            }
+
+            // Label
+            val tvLabel = TextView(requireContext()).apply {
+                text = label
+                textSize = 15f
+                setTextColor(
+                    requireContext().getColor(
+                        com.google.android.material.R.color.material_blue_grey_800
+                    )
+                )
+                val params = LinearLayout.LayoutParams(0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT, 0.4f)
+                layoutParams = params
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }
+
+            // Value
+            val tvValue = TextView(requireContext()).apply {
+                text = value
+                textSize = 16f
+                setTextColor(
+                    requireContext().getColor(android.R.color.white)
+                        .takeIf { isDarkMode() }
+                        ?: requireContext().getColor(android.R.color.black)
+                )
+                val params = LinearLayout.LayoutParams(0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT, 0.6f)
+                layoutParams = params
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }
+
+            card.addView(tvLabel)
+            card.addView(tvValue)
+            layoutResults.addView(card)
+        }
+    }
+
+    private fun isDarkMode(): Boolean {
+        val nightModeFlags = resources.configuration.uiMode and
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK
+        return nightModeFlags == android.content.res.Configuration.UI_MODE_NIGHT_YES
+    }
+
+    private fun updateStatus(message: String) {
+        tvStatus.text = message
+        tvStatus.contentDescription = "Status: $message"
     }
 }

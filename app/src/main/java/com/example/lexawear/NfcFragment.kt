@@ -19,10 +19,8 @@ import androidx.fragment.app.Fragment
 class NfcFragment : Fragment() {
 
     private lateinit var tvStatus: TextView
-    private lateinit var tvResult: TextView
     private lateinit var etName: EditText
     private lateinit var etNotes: EditText
-    private lateinit var btnScan: Button
     private lateinit var btnWrite: Button
 
     private lateinit var spinnerMaterial: Spinner
@@ -33,7 +31,6 @@ class NfcFragment : Fragment() {
     private lateinit var spinnerDryClean: Spinner
 
     private var nfcAdapter: NfcAdapter? = null
-    private var isScanning = false
     private var isWriting = false
 
     override fun onCreateView(
@@ -41,12 +38,9 @@ class NfcFragment : Fragment() {
     ): View {
         val view = inflater.inflate(R.layout.fragment_nfc, container, false)
 
-        // Bind views
         tvStatus = view.findViewById(R.id.tv_status)
-        tvResult = view.findViewById(R.id.tv_result)
         etName = view.findViewById(R.id.et_name)
         etNotes = view.findViewById(R.id.et_notes)
-        btnScan = view.findViewById(R.id.btn_scan)
         btnWrite = view.findViewById(R.id.btn_write)
         spinnerMaterial = view.findViewById(R.id.spinner_material)
         spinnerWash = view.findViewById(R.id.spinner_wash)
@@ -55,7 +49,6 @@ class NfcFragment : Fragment() {
         spinnerBleach = view.findViewById(R.id.spinner_bleach)
         spinnerDryClean = view.findViewById(R.id.spinner_dryclean)
 
-        // Setup spinners
         setupSpinner(spinnerMaterial, listOf(
             "Select material",
             "Cotton", "Polyester", "Wool", "Silk",
@@ -83,19 +76,11 @@ class NfcFragment : Fragment() {
             "Yes", "No"
         ))
 
-        // NFC check
         nfcAdapter = NfcAdapter.getDefaultAdapter(requireContext())
         when {
             nfcAdapter == null -> updateStatus("This device does not support NFC.")
             !nfcAdapter!!.isEnabled -> updateStatus("NFC is off. Please enable it in Settings.")
-            else -> updateStatus("Ready to scan or write a tag.")
-        }
-
-        btnScan.setOnClickListener {
-            isScanning = true
-            isWriting = false
-            updateStatus("Hold your phone to an NFC tag to read it.")
-            tvStatus.announceForAccessibility("Hold your phone to an NFC tag to read it.")
+            else -> updateStatus("Fill in the details and tap Write to Tag.")
         }
 
         btnWrite.setOnClickListener {
@@ -106,7 +91,6 @@ class NfcFragment : Fragment() {
                 return@setOnClickListener
             }
             isWriting = true
-            isScanning = false
             updateStatus("Hold your phone to an NFC tag to write to it.")
             tvStatus.announceForAccessibility("Hold your phone to an NFC tag to write to it.")
         }
@@ -125,54 +109,7 @@ class NfcFragment : Fragment() {
     }
 
     fun onTagDiscovered(tag: Tag) {
-        when {
-            isScanning -> readTag(tag)
-            isWriting -> writeTag(tag)
-        }
-    }
-
-    private fun readTag(tag: Tag) {
-        try {
-            val ndef = Ndef.get(tag)
-            if (ndef == null) {
-                requireActivity().runOnUiThread {
-                    updateStatus("Tag is empty or unreadable.")
-                    tvStatus.announceForAccessibility("Tag is empty or unreadable.")
-                }
-                return
-            }
-            ndef.connect()
-            val message = ndef.ndefMessage
-            ndef.close()
-
-            if (message == null) {
-                requireActivity().runOnUiThread {
-                    updateStatus("Tag is empty.")
-                    tvStatus.announceForAccessibility("Tag is empty.")
-                }
-                return
-            }
-
-            // Decode our compact format
-            val raw = message.records
-                .filter { it.tnf == NdefRecord.TNF_WELL_KNOWN }
-                .mapNotNull { String(it.payload).drop(3) }
-                .joinToString("")
-
-            val decoded = decodeTagData(raw)
-
-            requireActivity().runOnUiThread {
-                tvResult.text = decoded
-                tvResult.contentDescription = "Tag content: $decoded"
-                updateStatus("Tag read successfully.")
-                tvStatus.announceForAccessibility("Tag read successfully. $decoded")
-                isScanning = false
-            }
-        } catch (e: Exception) {
-            requireActivity().runOnUiThread {
-                updateStatus("Error reading tag: ${e.message}")
-            }
-        }
+        if (isWriting) writeTag(tag)
     }
 
     private fun writeTag(tag: Tag) {
@@ -203,12 +140,11 @@ class NfcFragment : Fragment() {
         } catch (e: Exception) {
             requireActivity().runOnUiThread {
                 updateStatus("Error writing tag: ${e.message}")
+                isWriting = false
             }
         }
     }
 
-    // Compact encoding: saves space on the tag
-    // Format: N:name|M:material|W:wash|D:dry|I:iron|B:bleach|C:dryclean|X:notes
     private fun encodeTagData(): String {
         val parts = mutableListOf<String>()
 
@@ -239,29 +175,6 @@ class NfcFragment : Fragment() {
         return parts.joinToString("|")
     }
 
-    // Decode compact format into readable text
-    private fun decodeTagData(raw: String): String {
-        val map = mapOf(
-            "N" to "Item",
-            "M" to "Material",
-            "W" to "Wash",
-            "D" to "Drying",
-            "I" to "Ironing",
-            "B" to "Bleaching",
-            "C" to "Dry Clean",
-            "X" to "Notes"
-        )
-        return raw.split("|")
-            .mapNotNull { part ->
-                val key = part.substringBefore(":")
-                val value = part.substringAfter(":")
-                val label = map[key] ?: return@mapNotNull null
-                "$label: $value"
-            }
-            .joinToString("\n")
-    }
-
-    // Returns null if user left spinner on the first "Select..." option
     private fun selectedOrNull(spinner: Spinner): String? {
         val selected = spinner.selectedItem?.toString() ?: return null
         return if (selected.startsWith("Select")) null else selected

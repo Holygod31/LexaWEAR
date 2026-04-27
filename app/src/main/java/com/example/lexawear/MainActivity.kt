@@ -22,8 +22,8 @@ class MainActivity : AppCompatActivity() {
 
         // Start on the middle tab (NFC)
         if (savedInstanceState == null) {
-            bottomNav.selectedItemId = R.id.tab_nfc
-            loadFragment(NfcFragment())
+            bottomNav.selectedItemId = R.id.tab_care
+            loadFragment(CareFragment())
         }
 
         bottomNav.setOnItemSelectedListener { item ->
@@ -56,14 +56,14 @@ class MainActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        // When an NFC tag is scanned, forward it to NfcFragment
         if (intent.action == NfcAdapter.ACTION_TAG_DISCOVERED ||
             intent.action == NfcAdapter.ACTION_NDEF_DISCOVERED) {
             val tag = intent.getParcelableExtra<Tag>(NfcAdapter.EXTRA_TAG)
             if (tag != null) {
                 val fragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
-                if (fragment is NfcFragment) {
-                    fragment.onTagDiscovered(tag)
+                when (fragment) {
+                    is NfcFragment -> fragment.onTagDiscovered(tag)
+                    is CareFragment -> fragment.onTagDiscovered(tag)
                 }
             }
         }
