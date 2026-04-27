@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/colorBackground">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- Title -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="NFC Tag"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorOnBackground"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Status -->
+        <TextView
+            android:id="@+id/tv_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Ready."
+            android:textSize="15sp"
+            android:textColor="?attr/colorOnSurface"
+            android:gravity="center"
+            android:padding="10dp"
+            android:background="@drawable/status_background"
+            android:layout_marginBottom="20dp"
+            android:accessibilityLiveRegion="polite" />
+
+        <!-- Form Table -->
+        <androidx.gridlayout.widget.GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            app:columnCount="2"
+            app:rowCount="8"
+            xmlns:app="http://schemas.android.com/apk/res-auto">
+
+            <!-- Item Name -->
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="Name"
+                android:textSize="15sp"
+                android:textColor="?attr/colorOnBackground"
+                android:gravity="center_vertical"
+                android:paddingEnd="8dp"
+                android:minHeight="52dp"
+                app:layout_column="0"
+                app:layout_row="0"
+                app:layout_columnWeight="0.35" />
+
+            <EditText
+                android:id="@+id/et_name"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:hint="e.g. Blue Jacket"
+                android:textSize="15sp"
+                android:padding="10dp"
+                android:inputType="textCapSentences"
+                android:background="@drawable/input_background"
+                android:minHeight="52dp"
+                android:contentDescription="Item name input"
+                app:layout_column="1"
+                app:layout_row="0"
+                app:layout_columnWeight="0.65" />
+
+            <!-- Material -->
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="Material"
+                android:textSize="15sp"
+                android:textColor="?attr/colorOnBackground"
+                android:gravity="center_vertical"
+                android:paddingEnd="8dp"
+                android:minHeight="52dp"
+                app:layout_column="0"
+                app:layout_row="1"
+                app:layout_columnWeight="0.35" />
+
+            <Spinner
+                android:id="@+id/spinner_material"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:minHeight="52dp"
+                android:background="@drawable/input_background"
+                android:padding="10dp"
+                android:contentDescription="Select material"
+                app:layout_column="1"
+                app:layout_row="1"
+                app:layout_columnWeight="0.65" />
+
+            <!-- Wash Temp -->
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="Wash"
+                android:textSize="15sp"
+                android:textColor="?attr/colorOnBackground"
+                android:gravity="center_vertical"
+                android:paddingEnd="8dp"
+                android:minHeight="52dp"
+                app:layout_column="0"
+                app:layout_row="2"
+                app:layout_columnWeight="0.35" />
+
+            <Spinner
+                android:id="@+id/spinner_wash"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:minHeight="52dp"
+                android:background="@drawable/input_background"
+                android:padding="10dp"
+                android:contentDescription="Select wash temperature"
+                app:layout_column="1"
+                app:layout_row="2"
+                app:layout_columnWeight="0.65" />
+
+            <!-- Drying -->
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="Drying"
+                android:textSize="15sp"
+                android:textColor="?attr/colorOnBackground"
+                android:gravity="center_vertical"
+                android:paddingEnd="8dp"
+                android:minHeight="52dp"
+                app:layout_column="0"
+                app:layout_row="3"
+                app:layout_columnWeight="0.35" />
+
+            <Spinner
+                android:id="@+id/spinner_dry"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:minHeight="52dp"
+                android:background="@drawable/input_background"
+                android:padding="10dp"
+                android:contentDescription="Select drying method"
+                app:layout_column="1"
+                app:layout_row="3"
+                app:layout_columnWeight="0.65" />
+
+            <!-- Ironing -->
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="Ironing"
+                android:textSize="15sp"
+                android:textColor="?attr/colorOnBackground"
+                android:gravity="center_vertical"
+                android:paddingEnd="8dp"
+                android:minHeight="52dp"
+                app:layout_column="0"
+                app:layout_row="4"
+                app:layout_columnWeight="0.35" />
+
+            <Spinner
+                android:id="@+id/spinner_iron"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:minHeight="52dp"
+                android:background="@drawable/input_background"
+                android:padding="10dp"
+                android:contentDescription="Select ironing temperature"
+                app:layout_column="1"
+                app:layout_row="4"
+                app:layout_columnWeight="0.65" />
+
+            <!-- Bleaching -->
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="Bleach"
+                android:textSize="15sp"
+                android:textColor="?attr/colorOnBackground"
+                android:gravity="center_vertical"
+                android:paddingEnd="8dp"
+                android:minHeight="52dp"
+                app:layout_column="0"
+                app:layout_row="5"
+                app:layout_columnWeight="0.35" />
+
+            <Spinner
+                android:id="@+id/spinner_bleach"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:minHeight="52dp"
+                android:background="@drawable/input_background"
+                android:padding="10dp"
+                android:contentDescription="Select bleaching option"
+                app:layout_column="1"
+                app:layout_row="5"
+                app:layout_columnWeight="0.65" />
+
+            <!-- Dry Cleaning -->
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="Dry Clean"
+                android:textSize="15sp"
+                android:textColor="?attr/colorOnBackground"
+                android:gravity="center_vertical"
+                android:paddingEnd="8dp"
+                android:minHeight="52dp"
+                app:layout_column="0"
+                app:layout_row="6"
+                app:layout_columnWeight="0.35" />
+
+            <Spinner
+                android:id="@+id/spinner_dryclean"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:minHeight="52dp"
+                android:background="@drawable/input_background"
+                android:padding="10dp"
+                android:contentDescription="Select dry cleaning option"
+                app:layout_column="1"
+                app:layout_row="6"
+                app:layout_columnWeight="0.65" />
+
+            <!-- Notes -->
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="Notes"
+                android:textSize="15sp"
+                android:textColor="?attr/colorOnBackground"
+                android:gravity="top"
+                android:paddingEnd="8dp"
+                android:paddingTop="10dp"
+                android:minHeight="52dp"
+                app:layout_column="0"
+                app:layout_row="7"
+                app:layout_columnWeight="0.35" />
+
+            <EditText
+                android:id="@+id/et_notes"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:hint="Extra notes..."
+                android:textSize="15sp"
+                android:padding="10dp"
+                android:inputType="textMultiLine|textCapSentences"
+                android:minLines="2"
+                android:gravity="top"
+                android:background="@drawable/input_background"
+                android:contentDescription="Extra notes input"
+                app:layout_column="1"
+                app:layout_row="7"
+                app:layout_columnWeight="0.65" />
+
+        </androidx.gridlayout.widget.GridLayout>
+
+        <!-- Result box -->
+        <TextView
+            android:id="@+id/tv_result"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Scanned tag content will appear here."
+            android:textSize="15sp"
+            android:textColor="?attr/colorOnSurface"
+            android:padding="14dp"
+            android:background="@drawable/result_background"
+            android:layout_marginBottom="20dp"
+            android:accessibilityLiveRegion="polite" />
+
+        <!-- Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="2">
+
+            <Button
+                android:id="@+id/btn_scan"
+                android:layout_width="0dp"
+                android:layout_height="68dp"
+                android:layout_weight="1"
+                android:text="Scan Tag"
+                android:textSize="16sp"
+                android:layout_marginEnd="8dp"
+                android:contentDescription="Scan NFC tag to read clothing information" />
+
+            <Button
+                android:id="@+id/btn_write"
+                android:layout_width="0dp"
+                android:layout_height="68dp"
+                android:layout_weight="1"
+                android:text="Write to Tag"
+                android:textSize="16sp"
+                android:layout_marginStart="8dp"
+                android:contentDescription="Write entered information to NFC tag" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

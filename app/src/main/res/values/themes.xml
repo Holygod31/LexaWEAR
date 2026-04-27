@@ -4,6 +4,5 @@
         <item name="colorPrimary">#1565C0</item>
         <item name="colorPrimaryVariant">#003c8f</item>
         <item name="colorOnPrimary">#FFFFFF</item>
-        <item name="colorSurface">#FFFFFF</item>
     </style>
 </resources>
