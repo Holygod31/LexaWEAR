@@ -18,10 +18,12 @@ class CareFragment : Fragment() {
 
     private lateinit var tvStatus: TextView
     private lateinit var btnScan: Button
+    private lateinit var btnAddToWardrobe: Button
     private lateinit var layoutResults: LinearLayout
 
     private var nfcAdapter: NfcAdapter? = null
     private var isScanning = false
+    private var lastScannedName: String? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -30,6 +32,7 @@ class CareFragment : Fragment() {
 
         tvStatus = view.findViewById(R.id.tv_care_status)
         btnScan = view.findViewById(R.id.btn_care_scan)
+        btnAddToWardrobe = view.findViewById(R.id.btn_add_to_wardrobe)
         layoutResults = view.findViewById(R.id.layout_care_results)
 
         nfcAdapter = NfcAdapter.getDefaultAdapter(requireContext())
@@ -42,8 +45,14 @@ class CareFragment : Fragment() {
 
         btnScan.setOnClickListener {
             isScanning = true
+            btnAddToWardrobe.visibility = View.GONE
             updateStatus("Hold your phone to a clothing tag.")
             tvStatus.announceForAccessibility("Hold your phone to a clothing tag.")
+        }
+
+        btnAddToWardrobe.setOnClickListener {
+            val name = lastScannedName ?: "Unknown Item"
+            (activity as? MainActivity)?.addToWardrobe(name)
         }
 
         return view
@@ -82,13 +91,24 @@ class CareFragment : Fragment() {
                 .mapNotNull { String(it.payload).drop(3) }
                 .joinToString("")
 
+            // Extract name for wardrobe
+            lastScannedName = raw.split("|")
+                .firstOrNull { it.startsWith("N:") }
+                ?.removePrefix("N:")
+
             val fields = parseTagData(raw)
 
             requireActivity().runOnUiThread {
                 displayCareInfo(fields)
                 isScanning = false
 
-                // Build accessibility announcement
+                // Show add to wardrobe button if tag has a name
+                if (lastScannedName != null) {
+                    btnAddToWardrobe.visibility = View.VISIBLE
+                    btnAddToWardrobe.contentDescription =
+                        "Add ${lastScannedName} to wardrobe"
+                }
+
                 val announcement = fields.entries.joinToString(". ") { "${it.key}: ${it.value}" }
                 tvStatus.announceForAccessibility("Tag read. $announcement")
             }
@@ -135,13 +155,6 @@ class CareFragment : Fragment() {
         layoutResults.visibility = View.VISIBLE
 
         fields.forEach { (label, value) ->
-            val row = layoutInflater.inflate(
-                android.R.layout.simple_list_item_2,
-                layoutResults,
-                false
-            )
-
-            // Card container
             val card = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.HORIZONTAL
                 setPadding(16, 20, 16, 20)
@@ -158,32 +171,27 @@ class CareFragment : Fragment() {
                 contentDescription = "$label: $value"
             }
 
-            // Label
             val tvLabel = TextView(requireContext()).apply {
                 text = label
                 textSize = 15f
-                setTextColor(
-                    requireContext().getColor(
-                        com.google.android.material.R.color.material_blue_grey_800
-                    )
-                )
-                val params = LinearLayout.LayoutParams(0,
-                    LinearLayout.LayoutParams.WRAP_CONTENT, 0.4f)
+                setTextColor(requireContext().getColor(
+                    com.google.android.material.R.color.material_blue_grey_800
+                ))
+                val params = LinearLayout.LayoutParams(
+                    0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.4f)
                 layoutParams = params
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             }
 
-            // Value
             val tvValue = TextView(requireContext()).apply {
                 text = value
                 textSize = 16f
                 setTextColor(
-                    requireContext().getColor(android.R.color.white)
-                        .takeIf { isDarkMode() }
-                        ?: requireContext().getColor(android.R.color.black)
+                    if (isDarkMode()) requireContext().getColor(android.R.color.white)
+                    else requireContext().getColor(android.R.color.black)
                 )
-                val params = LinearLayout.LayoutParams(0,
-                    LinearLayout.LayoutParams.WRAP_CONTENT, 0.6f)
+                val params = LinearLayout.LayoutParams(
+                    0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.6f)
                 layoutParams = params
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             }

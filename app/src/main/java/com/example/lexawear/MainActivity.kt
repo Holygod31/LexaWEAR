@@ -75,4 +75,17 @@ class MainActivity : AppCompatActivity() {
             .replace(R.id.fragment_container, fragment)
             .commit()
     }
+
+    fun addToWardrobe(name: String) {
+        val fragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
+        if (fragment is WardrobeFragment) {
+            fragment.showAddDialogPublic(name)
+        } else {
+            // Switch to wardrobe tab and then open dialog
+            bottomNav.selectedItemId = R.id.tab_wardrobe
+            val wardrobeFragment = WardrobeFragment()
+            loadFragment(wardrobeFragment)
+            wardrobeFragment.pendingAddName = name
+        }
+    }
 }

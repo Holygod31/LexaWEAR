@@ -25,6 +25,7 @@ data class WardrobeItem(
 
 class WardrobeFragment : Fragment() {
 
+    var pendingAddName: String? = null
     private lateinit var tvStatus: TextView
     private lateinit var btnScan: Button
     private lateinit var listView: ListView
@@ -84,6 +85,11 @@ class WardrobeFragment : Fragment() {
             tvStatus.announceForAccessibility("Hold your phone to a clothing tag to add it to your wardrobe.")
         }
 
+        pendingAddName?.let {
+            showAddDialog(it)
+            pendingAddName = null
+        }
+
         return view
     }
 
@@ -133,7 +139,7 @@ class WardrobeFragment : Fragment() {
         }
     }
 
-    private fun showAddDialog(nameFromTag: String) {
+    fun showAddDialog(nameFromTag: String) {
         val dialogView = LayoutInflater.from(requireContext())
             .inflate(android.R.layout.simple_list_item_1, null)
 
@@ -219,6 +225,10 @@ class WardrobeFragment : Fragment() {
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    fun showAddDialogPublic(name: String) {
+        showAddDialog(name)
     }
 
     private fun showItemOptionsDialog(item: WardrobeItem) {
