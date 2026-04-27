@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="?android:attr/colorBackground">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Title -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Wardrobe"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorOnBackground"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Status -->
+        <TextView
+            android:id="@+id/tv_wardrobe_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Scan a tag to add an item."
+            android:textSize="14sp"
+            android:textColor="?attr/colorOnSurface"
+            android:gravity="center"
+            android:padding="8dp"
+            android:background="@drawable/status_background"
+            android:layout_marginBottom="8dp"
+            android:accessibilityLiveRegion="polite" />
+
+    </LinearLayout>
+
+    <!-- Item list -->
+    <ListView
+        android:id="@+id/list_wardrobe"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="8dp"
+        android:dividerHeight="8dp"
+        android:divider="@null" />
+
+    <!-- Scan button pinned to bottom -->
+    <Button
+        android:id="@+id/btn_wardrobe_scan"
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:text="Scan Tag to Add Item"
+        android:textSize="18sp"
+        android:layout_margin="16dp"
+        android:contentDescription="Scan NFC tag to add clothing item to wardrobe" />
+
+</LinearLayout>

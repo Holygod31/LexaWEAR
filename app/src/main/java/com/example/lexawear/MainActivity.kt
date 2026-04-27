@@ -64,6 +64,7 @@ class MainActivity : AppCompatActivity() {
                 when (fragment) {
                     is NfcFragment -> fragment.onTagDiscovered(tag)
                     is CareFragment -> fragment.onTagDiscovered(tag)
+                    is WardrobeFragment -> fragment.onTagDiscovered(tag)
                 }
             }
         }
