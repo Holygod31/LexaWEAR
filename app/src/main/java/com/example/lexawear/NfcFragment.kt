@@ -165,7 +165,29 @@ class NfcFragment : Fragment() {
         val s = input.lowercase()
             .replace("degrees", "")
             .replace("degree", "")
+            // Expand negation contractions BEFORE keyword matching
+            .replace("don't",     "do not")
+            .replace("dont",      "do not")
+            .replace("can't",     "cannot")
+            .replace("cant",      "cannot")
+            .replace("cannot",    "can not")
+            .replace("won't",     "will not")
+            .replace("wont",      "will not")
+            .replace("shouldn't", "should not")
+            .replace("shouldnt",  "should not")
+            .replace("doesn't",   "does not")
+            .replace("doesnt",    "does not")
+            .replace("isn't",     "is not")
+            .replace("isnt",      "is not")
+            .replace("never",     "not")
             .trim()
+
+        // Whole-word matching to avoid "no" matching inside "now", "none", "know"
+        // and "not" matching inside "notes", "notice", etc.
+        fun hasWord(word: String): Boolean =
+            Regex("\\b${Regex.escape(word)}\\b").containsMatchIn(s)
+
+        val isNegated = hasWord("no") || hasWord("not")
 
         return when (key) {
             "CL" -> when {
@@ -186,7 +208,7 @@ class NfcFragment : Fragment() {
                 else -> input
             }
             "W" -> when {
-                ("no" in s || "not" in s) && ("wash" in s || "water" in s) -> "N"
+                isNegated && ("wash" in s || "water" in s) -> "N"
                 "hand" in s -> "H"
                 "60" in s || "sixty"  in s -> "60"
                 "40" in s || "forty"  in s -> "40"
@@ -194,27 +216,27 @@ class NfcFragment : Fragment() {
                 else -> input
             }
             "D" -> when {
-                ("no" in s || "not" in s) && "dry" in s -> "N"
+                isNegated && "dry" in s -> "N"
                 "tumble" in s -> "T"
                 "flat"   in s -> "F"
                 "air"    in s -> "A"
                 else -> input
             }
             "I" -> when {
-                "no" in s || "not" in s     -> "0"
+                isNegated                   -> "0"
                 "high" in s                 -> "3"
                 "medium" in s || "med" in s -> "2"
                 "low" in s                  -> "1"
                 else -> input
             }
             "B" -> when {
-                "yes" in s || "allow" in s || "ok" in s -> "1"
-                "no" in s || "not" in s                 -> "0"
+                hasWord("yes") || "allow" in s || hasWord("ok") -> "1"
+                isNegated                                       -> "0"
                 else -> input
             }
             "C" -> when {
-                "yes" in s || "ok" in s -> "1"
-                "no" in s || "not" in s -> "0"
+                hasWord("yes") || hasWord("ok") -> "1"
+                isNegated                       -> "0"
                 else -> input
             }
             else -> input
@@ -247,13 +269,13 @@ class NfcFragment : Fragment() {
                 else -> value
             }
             "B" -> when (value) {
-                "1" -> "Bleaching allowed"
-                "0" -> "No bleaching"
+                "1" -> "Yes"
+                "0" -> "No"
                 else -> value
             }
             "C" -> when (value) {
-                "1" -> "Dry clean: Yes"
-                "0" -> "Dry clean: No"
+                "1" -> "Yes"
+                "0" -> "No"
                 else -> value
             }
             else -> value

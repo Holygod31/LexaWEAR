@@ -157,13 +157,13 @@ class CareFragment : Fragment() {
                 else -> value
             }
             "B" -> when (value) {
-                "1" -> "Bleaching allowed"
-                "0" -> "No bleaching"
+                "1" -> "Yes"
+                "0" -> "No"
                 else -> value
             }
             "C" -> when (value) {
-                "1" -> "Dry clean: Yes"
-                "0" -> "Dry clean: No"
+                "1" -> "Yes"
+                "0" -> "No"
                 else -> value
             }
             else -> value
