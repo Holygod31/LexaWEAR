@@ -66,10 +66,12 @@ class CareFragment : Fragment() {
     private fun readTag(tag: Tag) {
         try {
             val ndef = Ndef.get(tag)
+
             if (ndef == null) {
                 requireActivity().runOnUiThread {
-                    updateStatus("Tag is empty or unreadable.")
-                    tvStatus.announceForAccessibility("Tag is empty or unreadable.")
+                    updateStatus("Tag is empty. Use the Write tab to add clothing info.")
+                    tvStatus.announceForAccessibility("Tag is empty. Use the Write tab to add clothing info.")
+                    isScanning = false
                 }
                 return
             }
@@ -80,8 +82,9 @@ class CareFragment : Fragment() {
 
             if (message == null) {
                 requireActivity().runOnUiThread {
-                    updateStatus("Tag is empty.")
-                    tvStatus.announceForAccessibility("Tag is empty.")
+                    updateStatus("Tag is empty. Use the Write tab to add clothing info.")
+                    tvStatus.announceForAccessibility("Tag is empty. Use the Write tab to add clothing info.")
+                    isScanning = false
                 }
                 return
             }
@@ -91,7 +94,17 @@ class CareFragment : Fragment() {
                 .mapNotNull { String(it.payload).drop(3) }
                 .joinToString("")
 
-            // Extract name for wardrobe
+            // Check if tag was written by LexaWEAR
+            if (!raw.contains("N:")) {
+                requireActivity().runOnUiThread {
+                    updateStatus("This tag was not written by LexaWEAR.")
+                    tvStatus.announceForAccessibility("This tag was not written by LexaWEAR.")
+                    isScanning = false
+                }
+                return
+            }
+
+            // Extract name for wardrobe button
             lastScannedName = raw.split("|")
                 .firstOrNull { it.startsWith("N:") }
                 ?.removePrefix("N:")
@@ -102,7 +115,6 @@ class CareFragment : Fragment() {
                 displayCareInfo(fields)
                 isScanning = false
 
-                // Show add to wardrobe button if tag has a name
                 if (lastScannedName != null) {
                     btnAddToWardrobe.visibility = View.VISIBLE
                     btnAddToWardrobe.contentDescription =
@@ -116,6 +128,7 @@ class CareFragment : Fragment() {
         } catch (e: Exception) {
             requireActivity().runOnUiThread {
                 updateStatus("Error reading tag: ${e.message}")
+                isScanning = false
             }
         }
     }
@@ -123,6 +136,12 @@ class CareFragment : Fragment() {
     private fun parseTagData(raw: String): Map<String, String> {
         val labelMap = mapOf(
             "N" to "Item",
+            "T" to "Type",
+            "CL" to "Color",
+            "P" to "Pattern",
+            "S" to "Size",
+            "F" to "Formality",
+            "SE" to "Season",
             "M" to "Material",
             "W" to "Wash",
             "D" to "Drying",
