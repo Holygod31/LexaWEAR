@@ -15,6 +15,7 @@ import android.widget.EditText
 import android.widget.Spinner
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import android.nfc.tech.NdefFormatable
 
 class NfcFragment : Fragment() {
 
@@ -115,28 +116,41 @@ class NfcFragment : Fragment() {
     private fun writeTag(tag: Tag) {
         try {
             val encoded = encodeTagData()
-
-            val ndef = Ndef.get(tag)
-            if (ndef == null) {
-                requireActivity().runOnUiThread {
-                    updateStatus("This tag cannot be written to.")
-                    tvStatus.announceForAccessibility("This tag cannot be written to.")
-                }
-                return
-            }
-
             val record = NdefRecord.createTextRecord("en", encoded)
             val ndefMessage = NdefMessage(arrayOf(record))
 
-            ndef.connect()
-            ndef.writeNdefMessage(ndefMessage)
-            ndef.close()
+            val ndef = Ndef.get(tag)
+            val ndefFormatable = NdefFormatable.get(tag)
+
+            when {
+                ndef != null -> {
+                    // Tag already formatted, just write
+                    ndef.connect()
+                    ndef.writeNdefMessage(ndefMessage)
+                    ndef.close()
+                }
+                ndefFormatable != null -> {
+                    // Tag is blank from factory, format AND write in one step
+                    ndefFormatable.connect()
+                    ndefFormatable.format(ndefMessage)
+                    ndefFormatable.close()
+                }
+                else -> {
+                    // Tag is locked or incompatible
+                    requireActivity().runOnUiThread {
+                        updateStatus("This tag cannot be written to.")
+                        tvStatus.announceForAccessibility("This tag cannot be written to.")
+                    }
+                    return
+                }
+            }
 
             requireActivity().runOnUiThread {
                 updateStatus("Tag written successfully!")
                 tvStatus.announceForAccessibility("Tag written successfully!")
                 isWriting = false
             }
+
         } catch (e: Exception) {
             requireActivity().runOnUiThread {
                 updateStatus("Error writing tag: ${e.message}")
