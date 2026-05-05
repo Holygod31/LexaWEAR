@@ -74,15 +74,16 @@ class MainActivity : AppCompatActivity() {
             .commit()
     }
 
-    fun addToWardrobe(name: String) {
+    fun addToWardrobe(raw: String) {
         val fragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
         if (fragment is WardrobeFragment) {
-            fragment.showAddDialog(name)
+            fragment.addItemFromRaw(raw)
         } else {
             bottomNav.selectedItemId = R.id.tab_wardrobe
-            val wardrobeFragment = WardrobeFragment()
+            val wardrobeFragment = WardrobeFragment().apply {
+                pendingRaw = raw
+            }
             loadFragment(wardrobeFragment)
-            wardrobeFragment.pendingAddName = name
         }
     }
 

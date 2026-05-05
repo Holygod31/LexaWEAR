@@ -6,7 +6,6 @@
     android:orientation="vertical"
     android:background="?android:attr/colorBackground">
 
-    <!-- Scrollable content -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -33,7 +32,7 @@
                 android:id="@+id/tv_care_status"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Scan a tag to see care instructions."
+                android:text="Hold your phone to a clothing tag."
                 android:textSize="15sp"
                 android:textColor="?attr/colorOnSurface"
                 android:gravity="center"
@@ -53,24 +52,14 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- Scan button pinned to bottom -->
-    <Button
-        android:id="@+id/btn_care_scan"
-        android:layout_width="match_parent"
-        android:layout_height="72dp"
-        android:text="Scan Tag"
-        android:textSize="18sp"
-        android:layout_margin="16dp"
-        android:contentDescription="Scan NFC tag to read care instructions" />
-
-    <!-- Add to wardrobe button (hidden until tag is scanned) -->
+    <!-- Add to wardrobe button pinned to bottom, hidden until tag scanned -->
     <Button
         android:id="@+id/btn_add_to_wardrobe"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
+        android:layout_height="72dp"
         android:text="Add to Wardrobe"
-        android:textSize="16sp"
-        android:layout_marginTop="8dp"
+        android:textSize="18sp"
+        android:layout_margin="16dp"
         android:visibility="gone"
         android:contentDescription="Add this clothing item to your wardrobe" />
 

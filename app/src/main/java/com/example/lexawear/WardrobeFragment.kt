@@ -43,6 +43,7 @@ class WardrobeFragment : Fragment() {
 
     var pendingAddName: String? = null
     var pendingFilters: Array<String>? = null
+    var pendingRaw: String? = null
 
     private lateinit var tvStatus: TextView
     private lateinit var tvActiveFilters: TextView
@@ -195,6 +196,11 @@ class WardrobeFragment : Fragment() {
             pendingAddName = null
         }
 
+        pendingRaw?.let {
+            addItemFromRaw(it)
+            pendingRaw = null
+        }
+
         pendingFilters?.let {
             applyFilters(it[0], it[1], it[2], it[3])
             pendingFilters = null
@@ -270,6 +276,27 @@ class WardrobeFragment : Fragment() {
                 isScanning = false
             }
         }
+    }
+    fun addItemFromRaw(raw: String) {
+        val tagData = parseTagData(raw)
+        val item = WardrobeItem(
+            id        = System.currentTimeMillis(),
+            name      = tagData["N"]  ?: "Unknown Item",
+            type      = tagData["T"]  ?: "",
+            color     = tagData["CL"] ?: "",
+            pattern   = tagData["P"]  ?: "",
+            size      = tagData["S"]  ?: "",
+            formality = tagData["F"]  ?: "",
+            season    = tagData["SE"] ?: "",
+            material  = tagData["M"]  ?: "",
+            wash      = tagData["W"]  ?: "",
+            dry       = tagData["D"]  ?: "",
+            iron      = tagData["I"]  ?: "",
+            bleach    = tagData["B"]  ?: "",
+            dryClean  = tagData["C"]  ?: "",
+            notes     = tagData["X"]  ?: ""
+        )
+        showConfirmDialog(item)
     }
 
     private fun parseTagData(raw: String): Map<String, String> {

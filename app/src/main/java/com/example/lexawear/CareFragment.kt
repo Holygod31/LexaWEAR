@@ -17,13 +17,11 @@ import androidx.fragment.app.Fragment
 class CareFragment : Fragment() {
 
     private lateinit var tvStatus: TextView
-    private lateinit var btnScan: Button
     private lateinit var btnAddToWardrobe: Button
     private lateinit var layoutResults: LinearLayout
 
     private var nfcAdapter: NfcAdapter? = null
-    private var isScanning = false
-    private var lastScannedName: String? = null
+    private var lastScannedRaw: String? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -31,7 +29,6 @@ class CareFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_care, container, false)
 
         tvStatus         = view.findViewById(R.id.tv_care_status)
-        btnScan          = view.findViewById(R.id.btn_care_scan)
         btnAddToWardrobe = view.findViewById(R.id.btn_add_to_wardrobe)
         layoutResults    = view.findViewById(R.id.layout_care_results)
 
@@ -40,26 +37,18 @@ class CareFragment : Fragment() {
         when {
             nfcAdapter == null -> updateStatus("This device does not support NFC.")
             !nfcAdapter!!.isEnabled -> updateStatus("NFC is off. Please enable it in Settings.")
-            else -> updateStatus("Scan a tag to see care instructions.")
-        }
-
-        btnScan.setOnClickListener {
-            isScanning = true
-            btnAddToWardrobe.visibility = View.GONE
-            updateStatus("Hold your phone to a clothing tag.")
-            tvStatus.announceForAccessibility("Hold your phone to a clothing tag.")
+            else -> updateStatus("Hold your phone to a clothing tag.")
         }
 
         btnAddToWardrobe.setOnClickListener {
-            val name = lastScannedName ?: "Unknown Item"
-            (activity as? MainActivity)?.addToWardrobe(name)
+            val raw = lastScannedRaw ?: return@setOnClickListener
+            (activity as? MainActivity)?.addToWardrobe(raw)
         }
 
         return view
     }
 
     fun onTagDiscovered(tag: Tag) {
-        if (!isScanning) return
         readTag(tag)
     }
 
@@ -71,7 +60,6 @@ class CareFragment : Fragment() {
                 requireActivity().runOnUiThread {
                     updateStatus("Tag is empty. Use the Write tab to add clothing info.")
                     tvStatus.announceForAccessibility("Tag is empty. Use the Write tab to add clothing info.")
-                    isScanning = false
                 }
                 return
             }
@@ -84,7 +72,6 @@ class CareFragment : Fragment() {
                 requireActivity().runOnUiThread {
                     updateStatus("Tag is empty. Use the Write tab to add clothing info.")
                     tvStatus.announceForAccessibility("Tag is empty. Use the Write tab to add clothing info.")
-                    isScanning = false
                 }
                 return
             }
@@ -98,12 +85,13 @@ class CareFragment : Fragment() {
                 requireActivity().runOnUiThread {
                     updateStatus("This tag was not written by LexaWEAR.")
                     tvStatus.announceForAccessibility("This tag was not written by LexaWEAR.")
-                    isScanning = false
                 }
                 return
             }
 
-            lastScannedName = raw.split("|")
+            lastScannedRaw = raw
+
+            val name = raw.split("|")
                 .firstOrNull { it.startsWith("N:") }
                 ?.removePrefix("N:")
 
@@ -111,21 +99,18 @@ class CareFragment : Fragment() {
 
             requireActivity().runOnUiThread {
                 displayCareInfo(fields)
-                isScanning = false
 
-                if (lastScannedName != null) {
-                    btnAddToWardrobe.visibility = View.VISIBLE
-                    btnAddToWardrobe.contentDescription = "Add $lastScannedName to wardrobe"
-                }
+                btnAddToWardrobe.visibility = View.VISIBLE
+                btnAddToWardrobe.contentDescription = "Add $name to wardrobe"
 
                 val announcement = fields.entries.joinToString(". ") { "${it.key}: ${it.value}" }
                 tvStatus.announceForAccessibility("Tag read. $announcement")
+                updateStatus("Tag read successfully.")
             }
 
         } catch (e: Exception) {
             requireActivity().runOnUiThread {
                 updateStatus("Error reading tag: ${e.message}")
-                isScanning = false
             }
         }
     }
@@ -222,7 +207,6 @@ class CareFragment : Fragment() {
             return
         }
 
-        updateStatus("Tag read successfully.")
         layoutResults.visibility = View.VISIBLE
 
         fields.forEach { (label, value) ->
