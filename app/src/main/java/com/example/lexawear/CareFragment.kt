@@ -132,6 +132,23 @@ class CareFragment : Fragment() {
 
     private fun decodeValue(key: String, value: String): String {
         return when (key) {
+            "CL" -> when (value.uppercase()) {
+                "212121" -> "Black"
+                "F5F5F5" -> "White"
+                "9E9E9E" -> "Grey"
+                "1A237E" -> "Navy"
+                "2196F3" -> "Blue"
+                "F44336" -> "Red"
+                "4CAF50" -> "Green"
+                "FFEB3B" -> "Yellow"
+                "FF9800" -> "Orange"
+                "E91E63" -> "Pink"
+                "9C27B0" -> "Purple"
+                "795548" -> "Brown"
+                "D7CCC8" -> "Beige"
+                "FF5722" -> "Multicolor"
+                else -> value
+            }
             "W" -> when (value) {
                 "30" -> "Wash at 30°"
                 "40" -> "Wash at 40°"

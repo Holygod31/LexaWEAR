@@ -60,7 +60,18 @@ class NfcFragment : Fragment() {
     data class Step(val key: String, val question: String, val hint: String)
 
     // Keys that need interpretation before storing
-    private val interpretedKeys = setOf("W", "D", "I", "B", "C")
+    private val interpretedKeys = setOf("CL", "W", "D", "I", "B", "C")
+
+    private val hexToName = mapOf(
+        "212121" to "Black",  "F5F5F5" to "White",
+        "9E9E9E" to "Grey",   "1A237E" to "Navy",
+        "2196F3" to "Blue",   "F44336" to "Red",
+        "4CAF50" to "Green",  "FFEB3B" to "Yellow",
+        "FF9800" to "Orange", "E91E63" to "Pink",
+        "9C27B0" to "Purple", "795548" to "Brown",
+        "D7CCC8" to "Beige",  "FF5722" to "Multicolor",
+        "607D8B" to "Other"
+    )
 
     private val speechLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -106,7 +117,6 @@ class NfcFragment : Fragment() {
             val key = steps[currentStep].key
 
             if (input.isNotEmpty()) {
-                // Interpret if needed, otherwise store raw
                 answers[key] = if (key in interpretedKeys) interpret(key, input) else input
             } else {
                 answers.remove(key)
@@ -151,8 +161,6 @@ class NfcFragment : Fragment() {
         return view
     }
 
-    // --- Interpreter ---
-
     private fun interpret(key: String, input: String): String {
         val s = input.lowercase()
             .replace("degrees", "")
@@ -160,26 +168,43 @@ class NfcFragment : Fragment() {
             .trim()
 
         return when (key) {
+            "CL" -> when {
+                "black"  in s -> "212121"
+                "white"  in s -> "F5F5F5"
+                "grey"   in s || "gray" in s -> "9E9E9E"
+                "navy"   in s -> "1A237E"
+                "blue"   in s -> "2196F3"
+                "red"    in s -> "F44336"
+                "green"  in s -> "4CAF50"
+                "yellow" in s -> "FFEB3B"
+                "orange" in s -> "FF9800"
+                "pink"   in s -> "E91E63"
+                "purple" in s -> "9C27B0"
+                "brown"  in s -> "795548"
+                "beige"  in s -> "D7CCC8"
+                "multi"  in s -> "FF5722"
+                else -> input
+            }
             "W" -> when {
                 ("no" in s || "not" in s) && ("wash" in s || "water" in s) -> "N"
                 "hand" in s -> "H"
-                "60" in s || "sixty" in s   -> "60"
-                "40" in s || "forty" in s   -> "40"
-                "30" in s || "thirty" in s  -> "30"
-                else -> input // keep raw if unrecognized
+                "60" in s || "sixty"  in s -> "60"
+                "40" in s || "forty"  in s -> "40"
+                "30" in s || "thirty" in s -> "30"
+                else -> input
             }
             "D" -> when {
-                ("no" in s || "not" in s) && ("dry" in s) -> "N"
+                ("no" in s || "not" in s) && "dry" in s -> "N"
                 "tumble" in s -> "T"
-                "flat" in s   -> "F"
-                "air" in s    -> "A"
+                "flat"   in s -> "F"
+                "air"    in s -> "A"
                 else -> input
             }
             "I" -> when {
-                "no" in s || "not" in s -> "0"
-                "high" in s             -> "3"
+                "no" in s || "not" in s     -> "0"
+                "high" in s                 -> "3"
                 "medium" in s || "med" in s -> "2"
-                "low" in s              -> "1"
+                "low" in s                  -> "1"
                 else -> input
             }
             "B" -> when {
@@ -188,18 +213,17 @@ class NfcFragment : Fragment() {
                 else -> input
             }
             "C" -> when {
-                "yes" in s || "ok" in s  -> "1"
-                "no" in s || "not" in s  -> "0"
+                "yes" in s || "ok" in s -> "1"
+                "no" in s || "not" in s -> "0"
                 else -> input
             }
             else -> input
         }
     }
 
-    // --- Display decoder for summary screen ---
-
     private fun decode(key: String, value: String): String {
         return when (key) {
+            "CL" -> hexToName[value.uppercase()] ?: value
             "W" -> when (value) {
                 "30" -> "Wash at 30°"
                 "40" -> "Wash at 40°"
@@ -242,7 +266,6 @@ class NfcFragment : Fragment() {
         tvQuestion.text = step.question
         etStepInput.hint = step.hint
 
-        // Show decoded value if going back to an interpreted field
         val stored = answers[step.key] ?: ""
         etStepInput.setText(
             if (step.key in interpretedKeys && stored.isNotEmpty())
@@ -285,7 +308,6 @@ class NfcFragment : Fragment() {
             "X"  to "Notes"
         )
 
-        // Decode interpreted fields for human-readable summary
         val summary = steps
             .filter { answers[it.key]?.isNotEmpty() == true }
             .joinToString("\n") {

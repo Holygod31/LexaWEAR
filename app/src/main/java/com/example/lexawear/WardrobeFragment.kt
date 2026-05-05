@@ -62,16 +62,26 @@ class WardrobeFragment : Fragment() {
     private var activeFilterSeason    = "All Seasons"
     private var activeFilterFormality = "All Formality"
 
-    private val colorMap = mapOf(
-        "Red" to "#F44336", "Blue" to "#2196F3",
-        "Green" to "#4CAF50", "Black" to "#212121",
-        "White" to "#F5F5F5", "Grey" to "#9E9E9E",
-        "Yellow" to "#FFEB3B", "Orange" to "#FF9800",
-        "Purple" to "#9C27B0", "Pink" to "#E91E63",
-        "Brown" to "#795548", "Beige" to "#D7CCC8",
-        "Navy" to "#1A237E", "Multicolor" to "#FF5722",
-        "Other" to "#607D8B"
+    // hex -> color name for display
+    private val hexToName = mapOf(
+        "F44336" to "Red",     "2196F3" to "Blue",
+        "4CAF50" to "Green",   "212121" to "Black",
+        "F5F5F5" to "White",   "9E9E9E" to "Grey",
+        "FFEB3B" to "Yellow",  "FF9800" to "Orange",
+        "9C27B0" to "Purple",  "E91E63" to "Pink",
+        "795548" to "Brown",   "D7CCC8" to "Beige",
+        "1A237E" to "Navy",    "FF5722" to "Multicolor",
+        "607D8B" to "Other"
     )
+
+    // color name -> hex for dot display
+    private val nameToHex = hexToName.entries.associate { (k, v) -> v to k }
+
+    private fun hexToColorName(hex: String): String =
+        hexToName[hex.uppercase().trimStart('#')] ?: hex
+
+    private fun colorNameToHex(name: String): String =
+        nameToHex[name] ?: "607D8B"
 
     private val voiceFilterLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -82,31 +92,31 @@ class WardrobeFragment : Fragment() {
                 ?.firstOrNull()?.lowercase() ?: return@registerForActivityResult
 
             activeFilterType = when {
-                "jacket" in spoken -> "Jacket"
-                "shirt" in spoken -> "Shirt"
+                "jacket"  in spoken -> "Jacket"
                 "t-shirt" in spoken || "tshirt" in spoken -> "T-Shirt"
+                "shirt"   in spoken -> "Shirt"
                 "sweater" in spoken -> "Sweater"
-                "coat" in spoken -> "Coat"
-                "pants" in spoken || "trousers" in spoken -> "Pants"
-                "shorts" in spoken -> "Shorts"
-                "dress" in spoken -> "Dress"
-                "skirt" in spoken -> "Skirt"
+                "coat"    in spoken -> "Coat"
+                "pants"   in spoken || "trousers" in spoken -> "Pants"
+                "shorts"  in spoken -> "Shorts"
+                "dress"   in spoken -> "Dress"
+                "skirt"   in spoken -> "Skirt"
                 else -> "All Types"
             }
             activeFilterColor = when {
-                "black" in spoken -> "Black"
-                "white" in spoken -> "White"
-                "grey" in spoken || "gray" in spoken -> "Grey"
-                "navy" in spoken -> "Navy"
-                "blue" in spoken -> "Blue"
-                "red" in spoken -> "Red"
-                "green" in spoken -> "Green"
+                "black"  in spoken -> "Black"
+                "white"  in spoken -> "White"
+                "grey"   in spoken || "gray" in spoken -> "Grey"
+                "navy"   in spoken -> "Navy"
+                "blue"   in spoken -> "Blue"
+                "red"    in spoken -> "Red"
+                "green"  in spoken -> "Green"
                 "yellow" in spoken -> "Yellow"
                 "orange" in spoken -> "Orange"
-                "pink" in spoken -> "Pink"
+                "pink"   in spoken -> "Pink"
                 "purple" in spoken -> "Purple"
-                "brown" in spoken -> "Brown"
-                "beige" in spoken -> "Beige"
+                "brown"  in spoken -> "Brown"
+                "beige"  in spoken -> "Beige"
                 else -> "All Colors"
             }
             activeFilterSeason = when {
@@ -118,8 +128,8 @@ class WardrobeFragment : Fragment() {
                 else -> "All Seasons"
             }
             activeFilterFormality = when {
-                "formal" in spoken && "smart" !in spoken -> "Formal"
-                "smart" in spoken -> "Smart Casual"
+                "smart"  in spoken -> "Smart Casual"
+                "formal" in spoken -> "Formal"
                 "casual" in spoken -> "Casual"
                 else -> "All Formality"
             }
@@ -273,10 +283,11 @@ class WardrobeFragment : Fragment() {
     }
 
     private fun showConfirmDialog(item: WardrobeItem) {
+        val colorDisplay = hexToColorName(item.color)
         val summary = listOf(
             "Name"      to item.name,
             "Type"      to item.type,
-            "Color"     to item.color,
+            "Color"     to colorDisplay,
             "Size"      to item.size,
             "Season"    to item.season,
             "Formality" to item.formality,
@@ -311,16 +322,55 @@ class WardrobeFragment : Fragment() {
     }
 
     private fun showItemOptionsDialog(item: WardrobeItem) {
+        val colorDisplay = hexToColorName(item.color)
+
+        // decode care fields
+        val washDisplay = when (item.wash) {
+            "30" -> "Wash at 30°"
+            "40" -> "Wash at 40°"
+            "60" -> "Wash at 60°"
+            "H"  -> "Hand wash"
+            "N"  -> "Do not wash"
+            else -> item.wash
+        }
+        val dryDisplay = when (item.dry) {
+            "A" -> "Air dry"
+            "T" -> "Tumble dry"
+            "F" -> "Flat dry"
+            "N" -> "Do not dry"
+            else -> item.dry
+        }
+        val ironDisplay = when (item.iron) {
+            "0" -> "No iron"
+            "1" -> "Low heat"
+            "2" -> "Medium heat"
+            "3" -> "High heat"
+            else -> item.iron
+        }
+        val bleachDisplay = when (item.bleach) {
+            "1" -> "Allowed"
+            "0" -> "Not allowed"
+            else -> item.bleach
+        }
+        val dryCleanDisplay = when (item.dryClean) {
+            "1" -> "Yes"
+            "0" -> "No"
+            else -> item.dryClean
+        }
+
         val summary = listOf(
             "Type"      to item.type,
-            "Color"     to item.color,
+            "Color"     to colorDisplay,
+            "Pattern"   to item.pattern,
             "Size"      to item.size,
             "Season"    to item.season,
             "Formality" to item.formality,
             "Material"  to item.material,
-            "Wash"      to item.wash,
-            "Dry"       to item.dry,
-            "Iron"      to item.iron,
+            "Wash"      to washDisplay,
+            "Dry"       to dryDisplay,
+            "Iron"      to ironDisplay,
+            "Bleach"    to bleachDisplay,
+            "Dry Clean" to dryCleanDisplay,
             "Notes"     to item.notes
         ).filter { it.second.isNotEmpty() }
             .joinToString("\n") { "${it.first}: ${it.second}" }
@@ -360,8 +410,11 @@ class WardrobeFragment : Fragment() {
         activeFilterFormality = formality
 
         filteredItems = items.filter { item ->
+            // color is stored as hex, filter uses color name — convert for comparison
+            val itemColorName = hexToColorName(item.color)
+
             (type == "All Types"          || item.type.equals(type, ignoreCase = true)) &&
-                    (color == "All Colors"        || item.color.equals(color, ignoreCase = true)) &&
+                    (color == "All Colors"        || itemColorName.equals(color, ignoreCase = true)) &&
                     (season == "All Seasons"      || item.season.equals(season, ignoreCase = true)) &&
                     (formality == "All Formality" || item.formality.equals(formality, ignoreCase = true))
         }.toMutableList()
@@ -462,15 +515,21 @@ class WardrobeFragment : Fragment() {
             val colorDot   = view.findViewById<View>(R.id.view_color_dot)
 
             tvName.text = item.name
-            tvCategory.text = listOf(item.type, item.color, item.size)
+
+            val colorName = hexToColorName(item.color)
+            tvCategory.text = listOf(item.type, colorName, item.size)
                 .filter { it.isNotEmpty() }
                 .joinToString(" · ")
 
-            val hexColor = colorMap[item.color] ?: "#607D8B"
-            colorDot.setBackgroundColor(Color.parseColor(hexColor))
+            val hexColor = "#${colorNameToHex(colorName)}"
+            try {
+                colorDot.setBackgroundColor(Color.parseColor(hexColor))
+            } catch (e: Exception) {
+                colorDot.setBackgroundColor(Color.parseColor("#607D8B"))
+            }
 
             view.contentDescription =
-                "${item.name}, ${item.type}, ${item.color}, size ${item.size}. Double tap for details."
+                "${item.name}, ${item.type}, $colorName, size ${item.size}. Double tap for details."
             view.isClickable = true
             view.isFocusable = true
             view.setOnClickListener { showItemOptionsDialog(item) }
