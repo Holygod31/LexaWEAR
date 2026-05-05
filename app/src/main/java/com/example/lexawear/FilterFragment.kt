@@ -15,20 +15,65 @@ class FilterFragment : Fragment() {
     private lateinit var tvSeasonValue: TextView
     private lateinit var tvFormalityValue: TextView
 
+    // Each option: code stored, label displayed. Empty code = "All X".
+    private data class Option(val code: String, val label: String)
+
     private val typeOptions = listOf(
-        "All Types", "Shirt", "T-Shirt", "Sweater", "Jacket", "Coat",
-        "Pants", "Shorts", "Dress", "Skirt", "Underwear", "Socks", "Other"
+        Option("",   "All Types"),
+        Option("SH", "Shirt"),
+        Option("TS", "T-Shirt"),
+        Option("JK", "Jacket"),
+        Option("CT", "Coat"),
+        Option("SW", "Sweater"),
+        Option("HD", "Hoodie"),
+        Option("BZ", "Blazer"),
+        Option("SU", "Suit"),
+        Option("VS", "Vest"),
+        Option("DR", "Dress"),
+        Option("UW", "Underwear"),
+        Option("PT", "Pants"),
+        Option("JN", "Jeans"),
+        Option("ST", "Shorts"),
+        Option("SK", "Skirt"),
+        Option("SC", "Socks")
     )
+
     private val colorOptions = listOf(
-        "All Colors", "Black", "White", "Grey", "Navy", "Blue",
-        "Red", "Green", "Yellow", "Orange", "Pink",
-        "Purple", "Brown", "Beige", "Multicolor"
+        Option("",       "All Colors"),
+        Option("212121", "Black"),
+        Option("F5F5F5", "White"),
+        Option("9E9E9E", "Grey"),
+        Option("1A237E", "Navy"),
+        Option("2196F3", "Blue"),
+        Option("F44336", "Red"),
+        Option("4CAF50", "Green"),
+        Option("FFEB3B", "Yellow"),
+        Option("FF9800", "Orange"),
+        Option("E91E63", "Pink"),
+        Option("9C27B0", "Purple"),
+        Option("795548", "Brown"),
+        Option("D7CCC8", "Beige"),
+        Option("FF5722", "Multicolor")
     )
+
     private val seasonOptions = listOf(
-        "All Seasons", "Spring", "Summer", "Autumn", "Winter", "All-Season"
+        Option("",   "All Seasons"),
+        Option("SP", "Spring"),
+        Option("SU", "Summer"),
+        Option("A",  "Autumn"),
+        Option("W",  "Winter")
     )
+
     private val formalityOptions = listOf(
-        "All Formality", "Casual", "Smart Casual", "Formal"
+        Option("",   "All Formality"),
+        Option("C",  "Casual"),
+        Option("SC", "Smart Casual"),
+        Option("BC", "Business Casual"),
+        Option("B",  "Business"),
+        Option("SF", "Smart Formal"),
+        Option("F",  "Formal"),
+        Option("S",  "Sport"),
+        Option("L",  "Lounge")
     )
 
     private var typeIndex      = 0
@@ -36,11 +81,11 @@ class FilterFragment : Fragment() {
     private var seasonIndex    = 0
     private var formalityIndex = 0
 
-    fun restoreFilters(type: String, color: String, season: String, formality: String) {
-        typeIndex      = typeOptions.indexOf(type).takeIf { it >= 0 } ?: 0
-        colorIndex     = colorOptions.indexOf(color).takeIf { it >= 0 } ?: 0
-        seasonIndex    = seasonOptions.indexOf(season).takeIf { it >= 0 } ?: 0
-        formalityIndex = formalityOptions.indexOf(formality).takeIf { it >= 0 } ?: 0
+    fun restoreFilters(typeCode: String, colorHex: String, seasonCode: String, formalityCode: String) {
+        typeIndex      = typeOptions.indexOfFirst { it.code.equals(typeCode, ignoreCase = true) }.takeIf { it >= 0 } ?: 0
+        colorIndex     = colorOptions.indexOfFirst { it.code.equals(colorHex, ignoreCase = true) }.takeIf { it >= 0 } ?: 0
+        seasonIndex    = seasonOptions.indexOfFirst { it.code.equals(seasonCode, ignoreCase = true) }.takeIf { it >= 0 } ?: 0
+        formalityIndex = formalityOptions.indexOfFirst { it.code.equals(formalityCode, ignoreCase = true) }.takeIf { it >= 0 } ?: 0
     }
 
     override fun onCreateView(
@@ -85,20 +130,17 @@ class FilterFragment : Fragment() {
 
         view.findViewById<Button>(R.id.btn_filter_apply).setOnClickListener {
             (activity as? MainActivity)?.applyFiltersFromFilter(
-                typeOptions[typeIndex],
-                colorOptions[colorIndex],
-                seasonOptions[seasonIndex],
-                formalityOptions[formalityIndex]
+                typeOptions[typeIndex].code,
+                colorOptions[colorIndex].code,
+                seasonOptions[seasonIndex].code,
+                formalityOptions[formalityIndex].code
             )
         }
 
         view.findViewById<Button>(R.id.btn_filter_clear).setOnClickListener {
             typeIndex = 0; colorIndex = 0; seasonIndex = 0; formalityIndex = 0
             updateAllDisplays()
-            (activity as? MainActivity)?.applyFiltersFromFilter(
-                typeOptions[0], colorOptions[0],
-                seasonOptions[0], formalityOptions[0]
-            )
+            (activity as? MainActivity)?.applyFiltersFromFilter("", "", "", "")
         }
 
         return view
@@ -108,32 +150,32 @@ class FilterFragment : Fragment() {
         btnPrev: Button,
         btnNext: Button,
         tvValue: TextView,
-        options: List<String>,
+        options: List<Option>,
         getIndex: () -> Int,
         setIndex: (Int) -> Unit
     ) {
-        tvValue.text = options[getIndex()]
+        tvValue.text = options[getIndex()].label
 
         btnPrev.setOnClickListener {
             val newIndex = if (getIndex() == 0) options.size - 1 else getIndex() - 1
             setIndex(newIndex)
-            tvValue.text = options[newIndex]
-            tvValue.announceForAccessibility(options[newIndex])
+            tvValue.text = options[newIndex].label
+            tvValue.announceForAccessibility(options[newIndex].label)
         }
 
         btnNext.setOnClickListener {
             val newIndex = (getIndex() + 1) % options.size
             setIndex(newIndex)
-            tvValue.text = options[newIndex]
-            tvValue.announceForAccessibility(options[newIndex])
+            tvValue.text = options[newIndex].label
+            tvValue.announceForAccessibility(options[newIndex].label)
         }
     }
 
     private fun updateAllDisplays() {
         if (!::tvTypeValue.isInitialized) return
-        tvTypeValue.text      = typeOptions[typeIndex]
-        tvColorValue.text     = colorOptions[colorIndex]
-        tvSeasonValue.text    = seasonOptions[seasonIndex]
-        tvFormalityValue.text = formalityOptions[formalityIndex]
+        tvTypeValue.text      = typeOptions[typeIndex].label
+        tvColorValue.text     = colorOptions[colorIndex].label
+        tvSeasonValue.text    = seasonOptions[seasonIndex].label
+        tvFormalityValue.text = formalityOptions[formalityIndex].label
     }
 }

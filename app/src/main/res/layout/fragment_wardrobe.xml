@@ -75,6 +75,19 @@
             android:layout_marginBottom="4dp"
             android:accessibilityLiveRegion="polite" />
 
+        <!-- Legacy banner -->
+        <TextView
+            android:id="@+id/tv_legacy_banner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:textColor="#D32F2F"
+            android:padding="8dp"
+            android:background="@drawable/status_background"
+            android:layout_marginTop="4dp"
+            android:visibility="gone"
+            android:accessibilityLiveRegion="polite" />
+
     </LinearLayout>
 
     <!-- Item list -->
