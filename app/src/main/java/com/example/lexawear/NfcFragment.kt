@@ -37,28 +37,30 @@ class NfcFragment : Fragment() {
     private var nfcAdapter: NfcAdapter? = null
     private var isWriting = false
 
-    // All steps in order
     private val steps = listOf(
-        Step("N",  "What is this item called?",         "e.g. Blue Winter Jacket"),
-        Step("T",  "What type of clothing is this?",    "e.g. Jacket, Shirt, Pants"),
-        Step("CL", "What color is it?",                 "e.g. Blue, Black, Multicolor"),
-        Step("P",  "What pattern does it have?",        "e.g. Plain, Striped, Checkered"),
-        Step("S",  "What is the size?",                 "e.g. M, L, XL, 32/32"),
-        Step("F",  "How formal is this item?",          "e.g. Casual, Smart Casual, Formal"),
-        Step("SE", "What season is it for?",            "e.g. Winter, Summer, All-Season"),
-        Step("M",  "What material is it made of?",      "e.g. Cotton, Wool, Polyester"),
-        Step("W",  "What is the wash temperature?",     "e.g. 30, 40, 60, Hand Wash"),
-        Step("D",  "How should it be dried?",           "e.g. Air Dry, Tumble Dry, Flat Dry"),
-        Step("I",  "What are the ironing instructions?","e.g. No Iron, Low Heat, High Heat"),
-        Step("B",  "Is bleaching allowed?",             "e.g. Yes, No"),
-        Step("C",  "Can it be dry cleaned?",            "e.g. Yes, No"),
-        Step("X",  "Any extra notes?",                  "e.g. Goes well with black pants")
+        Step("N",  "What is this item called?",          "e.g. Blue Winter Jacket"),
+        Step("T",  "What type of clothing is this?",     "e.g. Jacket, Shirt, Pants"),
+        Step("CL", "What color is it?",                  "e.g. Blue, Black, Multicolor"),
+        Step("P",  "What pattern does it have?",         "e.g. Plain, Striped, Checkered"),
+        Step("S",  "What is the size?",                  "e.g. M, L, XL, 32/32"),
+        Step("F",  "How formal is this item?",           "e.g. Casual, Smart Casual, Formal"),
+        Step("SE", "What season is it for?",             "e.g. Winter, Summer, All-Season"),
+        Step("M",  "What material is it made of?",       "e.g. Cotton, Wool, Polyester"),
+        Step("W",  "What is the wash temperature?",      "e.g. 30, 40, 60, Hand Wash"),
+        Step("D",  "How should it be dried?",            "e.g. Air, Tumble, Flat"),
+        Step("I",  "What are the ironing instructions?", "e.g. No Iron, Low, High"),
+        Step("B",  "Is bleaching allowed?",              "e.g. Yes, No"),
+        Step("C",  "Can it be dry cleaned?",             "e.g. Yes, No"),
+        Step("X",  "Any extra notes?",                   "e.g. Goes well with black pants")
     )
 
     private val answers = mutableMapOf<String, String>()
     private var currentStep = 0
 
     data class Step(val key: String, val question: String, val hint: String)
+
+    // Keys that need interpretation before storing
+    private val interpretedKeys = setOf("W", "D", "I", "B", "C")
 
     private val speechLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -79,16 +81,16 @@ class NfcFragment : Fragment() {
     ): View {
         val view = inflater.inflate(R.layout.fragment_nfc, container, false)
 
-        tvStatus       = view.findViewById(R.id.tv_status)
+        tvStatus        = view.findViewById(R.id.tv_status)
         tvStepIndicator = view.findViewById(R.id.tv_step_indicator)
-        tvQuestion     = view.findViewById(R.id.tv_question)
-        etStepInput    = view.findViewById(R.id.et_step_input)
-        btnMic         = view.findViewById(R.id.btn_mic)
-        btnBack        = view.findViewById(R.id.btn_back)
-        btnNext        = view.findViewById(R.id.btn_next)
-        layoutSummary  = view.findViewById(R.id.layout_summary)
-        tvSummary      = view.findViewById(R.id.tv_summary)
-        btnWrite       = view.findViewById(R.id.btn_write)
+        tvQuestion      = view.findViewById(R.id.tv_question)
+        etStepInput     = view.findViewById(R.id.et_step_input)
+        btnMic          = view.findViewById(R.id.btn_mic)
+        btnBack         = view.findViewById(R.id.btn_back)
+        btnNext         = view.findViewById(R.id.btn_next)
+        layoutSummary   = view.findViewById(R.id.layout_summary)
+        tvSummary       = view.findViewById(R.id.tv_summary)
+        btnWrite        = view.findViewById(R.id.btn_write)
 
         nfcAdapter = NfcAdapter.getDefaultAdapter(requireContext())
         when {
@@ -101,11 +103,13 @@ class NfcFragment : Fragment() {
 
         btnNext.setOnClickListener {
             val input = etStepInput.text.toString().trim()
-            // Save answer (allow empty to skip optional fields)
+            val key = steps[currentStep].key
+
             if (input.isNotEmpty()) {
-                answers[steps[currentStep].key] = input
+                // Interpret if needed, otherwise store raw
+                answers[key] = if (key in interpretedKeys) interpret(key, input) else input
             } else {
-                answers.remove(steps[currentStep].key)
+                answers.remove(key)
             }
 
             if (currentStep < steps.size - 1) {
@@ -147,15 +151,106 @@ class NfcFragment : Fragment() {
         return view
     }
 
+    // --- Interpreter ---
+
+    private fun interpret(key: String, input: String): String {
+        val s = input.lowercase()
+            .replace("degrees", "")
+            .replace("degree", "")
+            .trim()
+
+        return when (key) {
+            "W" -> when {
+                ("no" in s || "not" in s) && ("wash" in s || "water" in s) -> "N"
+                "hand" in s -> "H"
+                "60" in s || "sixty" in s   -> "60"
+                "40" in s || "forty" in s   -> "40"
+                "30" in s || "thirty" in s  -> "30"
+                else -> input // keep raw if unrecognized
+            }
+            "D" -> when {
+                ("no" in s || "not" in s) && ("dry" in s) -> "N"
+                "tumble" in s -> "T"
+                "flat" in s   -> "F"
+                "air" in s    -> "A"
+                else -> input
+            }
+            "I" -> when {
+                "no" in s || "not" in s -> "0"
+                "high" in s             -> "3"
+                "medium" in s || "med" in s -> "2"
+                "low" in s              -> "1"
+                else -> input
+            }
+            "B" -> when {
+                "yes" in s || "allow" in s || "ok" in s -> "1"
+                "no" in s || "not" in s                 -> "0"
+                else -> input
+            }
+            "C" -> when {
+                "yes" in s || "ok" in s  -> "1"
+                "no" in s || "not" in s  -> "0"
+                else -> input
+            }
+            else -> input
+        }
+    }
+
+    // --- Display decoder for summary screen ---
+
+    private fun decode(key: String, value: String): String {
+        return when (key) {
+            "W" -> when (value) {
+                "30" -> "Wash at 30°"
+                "40" -> "Wash at 40°"
+                "60" -> "Wash at 60°"
+                "H"  -> "Hand wash"
+                "N"  -> "Do not wash"
+                else -> value
+            }
+            "D" -> when (value) {
+                "A" -> "Air dry"
+                "T" -> "Tumble dry"
+                "F" -> "Flat dry"
+                "N" -> "Do not dry"
+                else -> value
+            }
+            "I" -> when (value) {
+                "0" -> "No iron"
+                "1" -> "Low heat"
+                "2" -> "Medium heat"
+                "3" -> "High heat"
+                else -> value
+            }
+            "B" -> when (value) {
+                "1" -> "Bleaching allowed"
+                "0" -> "No bleaching"
+                else -> value
+            }
+            "C" -> when (value) {
+                "1" -> "Dry clean: Yes"
+                "0" -> "Dry clean: No"
+                else -> value
+            }
+            else -> value
+        }
+    }
+
     private fun showStep(index: Int) {
         val step = steps[index]
         tvStepIndicator.text = "Step ${index + 1} of ${steps.size}"
         tvQuestion.text = step.question
         etStepInput.hint = step.hint
-        etStepInput.setText(answers[step.key] ?: "")
+
+        // Show decoded value if going back to an interpreted field
+        val stored = answers[step.key] ?: ""
+        etStepInput.setText(
+            if (step.key in interpretedKeys && stored.isNotEmpty())
+                decode(step.key, stored)
+            else stored
+        )
         etStepInput.requestFocus()
 
-        // Hide summary, show input
         layoutSummary.visibility = View.GONE
         btnWrite.visibility = View.GONE
         btnNext.text = if (index == steps.size - 1) "Review" else "Next"
@@ -165,7 +260,6 @@ class NfcFragment : Fragment() {
         tvQuestion.announceForAccessibility(
             "Step ${index + 1} of ${steps.size}. ${step.question}"
         )
-
         updateStatus("Answer each question to tag this item.")
     }
 
@@ -191,9 +285,12 @@ class NfcFragment : Fragment() {
             "X"  to "Notes"
         )
 
+        // Decode interpreted fields for human-readable summary
         val summary = steps
             .filter { answers[it.key]?.isNotEmpty() == true }
-            .joinToString("\n") { "${labelMap[it.key]}: ${answers[it.key]}" }
+            .joinToString("\n") {
+                "${labelMap[it.key]}: ${decode(it.key, answers[it.key]!!)}"
+            }
 
         tvSummary.text = summary
         tvSummary.contentDescription = "Summary. $summary. Tap Write to Tag to continue."
@@ -238,7 +335,6 @@ class NfcFragment : Fragment() {
                 updateStatus("Tag written successfully!")
                 tvStatus.announceForAccessibility("Tag written successfully!")
                 isWriting = false
-                // Reset for next item
                 answers.clear()
                 currentStep = 0
                 showStep(0)

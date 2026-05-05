@@ -30,10 +30,10 @@ class CareFragment : Fragment() {
     ): View {
         val view = inflater.inflate(R.layout.fragment_care, container, false)
 
-        tvStatus = view.findViewById(R.id.tv_care_status)
-        btnScan = view.findViewById(R.id.btn_care_scan)
+        tvStatus         = view.findViewById(R.id.tv_care_status)
+        btnScan          = view.findViewById(R.id.btn_care_scan)
         btnAddToWardrobe = view.findViewById(R.id.btn_add_to_wardrobe)
-        layoutResults = view.findViewById(R.id.layout_care_results)
+        layoutResults    = view.findViewById(R.id.layout_care_results)
 
         nfcAdapter = NfcAdapter.getDefaultAdapter(requireContext())
 
@@ -94,7 +94,6 @@ class CareFragment : Fragment() {
                 .mapNotNull { String(it.payload).drop(3) }
                 .joinToString("")
 
-            // Check if tag was written by LexaWEAR
             if (!raw.contains("N:")) {
                 requireActivity().runOnUiThread {
                     updateStatus("This tag was not written by LexaWEAR.")
@@ -104,7 +103,6 @@ class CareFragment : Fragment() {
                 return
             }
 
-            // Extract name for wardrobe button
             lastScannedName = raw.split("|")
                 .firstOrNull { it.startsWith("N:") }
                 ?.removePrefix("N:")
@@ -117,8 +115,7 @@ class CareFragment : Fragment() {
 
                 if (lastScannedName != null) {
                     btnAddToWardrobe.visibility = View.VISIBLE
-                    btnAddToWardrobe.contentDescription =
-                        "Add ${lastScannedName} to wardrobe"
+                    btnAddToWardrobe.contentDescription = "Add $lastScannedName to wardrobe"
                 }
 
                 val announcement = fields.entries.joinToString(". ") { "${it.key}: ${it.value}" }
@@ -133,30 +130,68 @@ class CareFragment : Fragment() {
         }
     }
 
+    private fun decodeValue(key: String, value: String): String {
+        return when (key) {
+            "W" -> when (value) {
+                "30" -> "Wash at 30°"
+                "40" -> "Wash at 40°"
+                "60" -> "Wash at 60°"
+                "H"  -> "Hand wash"
+                "N"  -> "Do not wash"
+                else -> value
+            }
+            "D" -> when (value) {
+                "A" -> "Air dry"
+                "T" -> "Tumble dry"
+                "F" -> "Flat dry"
+                "N" -> "Do not dry"
+                else -> value
+            }
+            "I" -> when (value) {
+                "0" -> "No iron"
+                "1" -> "Low heat"
+                "2" -> "Medium heat"
+                "3" -> "High heat"
+                else -> value
+            }
+            "B" -> when (value) {
+                "1" -> "Bleaching allowed"
+                "0" -> "No bleaching"
+                else -> value
+            }
+            "C" -> when (value) {
+                "1" -> "Dry clean: Yes"
+                "0" -> "Dry clean: No"
+                else -> value
+            }
+            else -> value
+        }
+    }
+
     private fun parseTagData(raw: String): Map<String, String> {
         val labelMap = mapOf(
-            "N" to "Item",
-            "T" to "Type",
+            "N"  to "Item",
+            "T"  to "Type",
             "CL" to "Color",
-            "P" to "Pattern",
-            "S" to "Size",
-            "F" to "Formality",
+            "P"  to "Pattern",
+            "S"  to "Size",
+            "F"  to "Formality",
             "SE" to "Season",
-            "M" to "Material",
-            "W" to "Wash",
-            "D" to "Drying",
-            "I" to "Ironing",
-            "B" to "Bleaching",
-            "C" to "Dry Clean",
-            "X" to "Notes"
+            "M"  to "Material",
+            "W"  to "Wash",
+            "D"  to "Drying",
+            "I"  to "Ironing",
+            "B"  to "Bleaching",
+            "C"  to "Dry Clean",
+            "X"  to "Notes"
         )
         val result = linkedMapOf<String, String>()
         raw.split("|").forEach { part ->
-            val key = part.substringBefore(":")
+            val key   = part.substringBefore(":")
             val value = part.substringAfter(":")
             val label = labelMap[key]
             if (label != null && value.isNotEmpty()) {
-                result[label] = value
+                result[label] = decodeValue(key, value)
             }
         }
         return result
@@ -178,8 +213,7 @@ class CareFragment : Fragment() {
                 orientation = LinearLayout.HORIZONTAL
                 setPadding(16, 20, 16, 20)
                 background = ContextCompat.getDrawable(
-                    requireContext(),
-                    R.drawable.result_background
+                    requireContext(), R.drawable.result_background
                 )
                 val params = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
@@ -196,9 +230,8 @@ class CareFragment : Fragment() {
                 setTextColor(requireContext().getColor(
                     com.google.android.material.R.color.material_blue_grey_800
                 ))
-                val params = LinearLayout.LayoutParams(
+                layoutParams = LinearLayout.LayoutParams(
                     0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.4f)
-                layoutParams = params
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             }
 
@@ -209,9 +242,8 @@ class CareFragment : Fragment() {
                     if (isDarkMode()) requireContext().getColor(android.R.color.white)
                     else requireContext().getColor(android.R.color.black)
                 )
-                val params = LinearLayout.LayoutParams(
+                layoutParams = LinearLayout.LayoutParams(
                     0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.6f)
-                layoutParams = params
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             }
 
