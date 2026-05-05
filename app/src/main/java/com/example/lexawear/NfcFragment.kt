@@ -27,8 +27,10 @@ class NfcFragment : Fragment() {
     private lateinit var tvStepIndicator: TextView
     private lateinit var tvQuestion: TextView
     private lateinit var etStepInput: EditText
+    private lateinit var tvStepError: TextView
     private lateinit var btnMic: Button
     private lateinit var btnBack: Button
+    private lateinit var btnSkip: Button
     private lateinit var btnNext: Button
     private lateinit var layoutSummary: ScrollView
     private lateinit var tvSummary: TextView
@@ -42,7 +44,7 @@ class NfcFragment : Fragment() {
         Step("T",  "What type of clothing is this?",     "e.g. Jacket, Shirt, Pants"),
         Step("CL", "What color is it?",                  "e.g. Blue, Black, Multicolor"),
         Step("P",  "What pattern does it have?",         "e.g. Plain, Striped, Checkered"),
-        Step("S",  "What is the size?",                  "e.g. M, L, XL, 32/32"),
+        Step("S",  "What is the size?",                  "e.g. M, L, XL, 32/32, 38"),
         Step("F",  "How formal is this item?",           "e.g. Casual, Smart Casual, Formal"),
         Step("SE", "What season is it for?",             "e.g. Winter, Summer, All-Season"),
         Step("M",  "What material is it made of?",       "e.g. Cotton, Wool, Polyester"),
@@ -59,8 +61,13 @@ class NfcFragment : Fragment() {
 
     data class Step(val key: String, val question: String, val hint: String)
 
-    // Keys that need interpretation before storing
-    private val interpretedKeys = setOf("CL", "W", "D", "I", "B", "C")
+    // Keys whose interpret() output is the canonical stored form
+    private val interpretedKeys = setOf("CL", "S", "W", "D", "I", "B", "C")
+
+    // Keys that must successfully interpret to a known code; if interpret()
+    // returns the original input (i.e. it didn't recognize anything),
+    // the user is asked to rephrase. Skip is always available as a bailout.
+    private val validatedKeys = setOf("CL", "S", "W", "D", "I", "B", "C")
 
     private val hexToName = mapOf(
         "212121" to "Black",  "F5F5F5" to "White",
@@ -71,6 +78,17 @@ class NfcFragment : Fragment() {
         "9C27B0" to "Purple", "795548" to "Brown",
         "D7CCC8" to "Beige",  "FF5722" to "Multicolor",
         "607D8B" to "Other"
+    )
+
+    // Per-key example phrasing shown in the error message
+    private val rejectionHelp = mapOf(
+        "CL" to "Try a color name like blue, black, or red.",
+        "S"  to "Try a size like medium, large, 32 by 32, or 38.",
+        "W"  to "Try 30, 40, 60, hand wash, or do not wash.",
+        "D"  to "Try air dry, tumble dry, flat dry, or do not dry.",
+        "I"  to "Try no iron, low, medium, or high.",
+        "B"  to "Try yes or no.",
+        "C"  to "Try yes or no."
     )
 
     private val speechLauncher = registerForActivityResult(
@@ -96,8 +114,10 @@ class NfcFragment : Fragment() {
         tvStepIndicator = view.findViewById(R.id.tv_step_indicator)
         tvQuestion      = view.findViewById(R.id.tv_question)
         etStepInput     = view.findViewById(R.id.et_step_input)
+        tvStepError     = view.findViewById(R.id.tv_step_error)
         btnMic          = view.findViewById(R.id.btn_mic)
         btnBack         = view.findViewById(R.id.btn_back)
+        btnSkip         = view.findViewById(R.id.btn_skip)
         btnNext         = view.findViewById(R.id.btn_next)
         layoutSummary   = view.findViewById(R.id.layout_summary)
         tvSummary       = view.findViewById(R.id.tv_summary)
@@ -116,25 +136,49 @@ class NfcFragment : Fragment() {
             val input = etStepInput.text.toString().trim()
             val key = steps[currentStep].key
 
-            if (input.isNotEmpty()) {
-                answers[key] = if (key in interpretedKeys) interpret(key, input) else input
-            } else {
-                answers.remove(key)
+            // Name is required.
+            if (key == "N" && input.isEmpty()) {
+                showStepError("Please enter a name for this item.")
+                return@setOnClickListener
             }
 
-            if (currentStep < steps.size - 1) {
-                currentStep++
-                showStep(currentStep)
-            } else {
-                showSummary()
+            if (input.isEmpty()) {
+                // Empty + non-required = treat as skip (no answer stored).
+                answers.remove(key)
+                clearStepError()
+                advance()
+                return@setOnClickListener
             }
+
+            val processed = if (key in interpretedKeys) interpret(key, input) else input
+
+            // Reject-and-reprompt: validated fields must produce a known code.
+            // If interpret() returned the original input untouched, it didn't recognize anything.
+            if (key in validatedKeys && processed.equals(input, ignoreCase = true)) {
+                val help = rejectionHelp[key] ?: "Please rephrase your answer."
+                showStepError("Sorry, I didn't catch that. $help")
+                return@setOnClickListener
+            }
+
+            answers[key] = processed
+            clearStepError()
+            advance()
         }
 
         btnBack.setOnClickListener {
             if (currentStep > 0) {
+                clearStepError()
                 currentStep--
                 showStep(currentStep)
             }
+        }
+
+        btnSkip.setOnClickListener {
+            val key = steps[currentStep].key
+            answers.remove(key)
+            etStepInput.setText("")
+            clearStepError()
+            advance()
         }
 
         btnMic.setOnClickListener {
@@ -161,11 +205,32 @@ class NfcFragment : Fragment() {
         return view
     }
 
+    private fun advance() {
+        if (currentStep < steps.size - 1) {
+            currentStep++
+            showStep(currentStep)
+        } else {
+            showSummary()
+        }
+    }
+
+    private fun showStepError(message: String) {
+        tvStepError.text = message
+        tvStepError.visibility = View.VISIBLE
+        tvStepError.announceForAccessibility(message)
+        etStepInput.requestFocus()
+    }
+
+    private fun clearStepError() {
+        tvStepError.text = ""
+        tvStepError.visibility = View.GONE
+    }
+
     private fun interpret(key: String, input: String): String {
         val s = input.lowercase()
             .replace("degrees", "")
             .replace("degree", "")
-            // Expand negation contractions BEFORE keyword matching
+            // Expand negation contractions before keyword matching
             .replace("don't",     "do not")
             .replace("dont",      "do not")
             .replace("can't",     "cannot")
@@ -182,8 +247,6 @@ class NfcFragment : Fragment() {
             .replace("never",     "not")
             .trim()
 
-        // Whole-word matching to avoid "no" matching inside "now", "none", "know"
-        // and "not" matching inside "notes", "notice", etc.
         fun hasWord(word: String): Boolean =
             Regex("\\b${Regex.escape(word)}\\b").containsMatchIn(s)
 
@@ -207,6 +270,7 @@ class NfcFragment : Fragment() {
                 "multi"  in s -> "FF5722"
                 else -> input
             }
+            "S" -> interpretSize(input, s)
             "W" -> when {
                 isNegated && ("wash" in s || "water" in s) -> "N"
                 "hand" in s -> "H"
@@ -243,9 +307,115 @@ class NfcFragment : Fragment() {
         }
     }
 
+    /**
+     * Size interpreter.
+     * Recognized patterns (in priority order):
+     *   - One-size markers       -> "OS"
+     *   - Letter sizes           -> "XS", "S", "M", "L", "XL", "XXL", "XXXL"
+     *   - Waist/length pairs     -> "W/L" e.g. "32/32"
+     *   - Bare numeric           -> "38", "40", etc.
+     * If nothing matches, returns the original input (caller will reject).
+     * No unit conversion is attempted — what the user says is what gets stored.
+     */
+    private fun interpretSize(rawInput: String, normalized: String): String {
+        val s = normalized
+            .replace("-", " ")
+            .replace(",", " ")
+
+        // 1. One-size markers
+        val oneSizePatterns = listOf("one size", "free size", "onesize", "freesize")
+        if (oneSizePatterns.any { it in s }) return "OS"
+        if (Regex("\\bos\\b").containsMatchIn(s)) return "OS"
+
+        // 2. Word-number normalization for spoken pant sizes
+        //    e.g. "thirty two by thirty two" -> "32 by 32"
+        val withDigits = wordsToDigits(s)
+
+        // 3. Waist/length pairs:
+        //    "32/32", "32x32", "32 x 32", "32 by 32"
+        Regex("(\\d{2,3})\\s*(?:/|x|by)\\s*(\\d{2,3})")
+            .find(withDigits)
+            ?.let { return "${it.groupValues[1]}/${it.groupValues[2]}" }
+
+        // 4. Letter sizes — check longest first so "extra large" beats "large".
+        //    Spoken forms: "extra extra large", "double extra large", etc.
+        val letterPatterns = listOf(
+            // (regex, canonical code)
+            Regex("\\bxxxl\\b|triple\\s*(?:extra\\s*)?large|3xl") to "XXXL",
+            Regex("\\bxxl\\b|double\\s*(?:extra\\s*)?large|2xl") to "XXL",
+            Regex("\\bxl\\b|extra\\s*large")                    to "XL",
+            Regex("\\bxs\\b|extra\\s*small")                    to "XS",
+            Regex("\\bl\\b|\\blarge\\b")                        to "L",
+            Regex("\\bm\\b|\\bmedium\\b")                       to "M",
+            Regex("\\bs\\b|\\bsmall\\b")                        to "S"
+        )
+        for ((pattern, code) in letterPatterns) {
+            if (pattern.containsMatchIn(withDigits)) return code
+        }
+
+        // 5. Bare numeric size — extract first 2–3 digit number
+        Regex("\\b(\\d{2,3})\\b")
+            .find(withDigits)
+            ?.let { return it.groupValues[1] }
+
+        // Nothing matched
+        return rawInput
+    }
+
+    /**
+     * Convert spoken number words to digits within a string.
+     * Handles 0-99 in compound forms like "thirty two", "forty five".
+     */
+    private fun wordsToDigits(input: String): String {
+        val ones = mapOf(
+            "zero" to 0, "one" to 1, "two" to 2, "three" to 3, "four" to 4,
+            "five" to 5, "six" to 6, "seven" to 7, "eight" to 8, "nine" to 9,
+            "ten" to 10, "eleven" to 11, "twelve" to 12, "thirteen" to 13,
+            "fourteen" to 14, "fifteen" to 15, "sixteen" to 16,
+            "seventeen" to 17, "eighteen" to 18, "nineteen" to 19
+        )
+        val tens = mapOf(
+            "twenty" to 20, "thirty" to 30, "forty" to 40, "fifty" to 50,
+            "sixty" to 60, "seventy" to 70, "eighty" to 80, "ninety" to 90
+        )
+
+        val tokens = input.split(Regex("\\s+")).toMutableList()
+        val out = mutableListOf<String>()
+        var i = 0
+        while (i < tokens.size) {
+            val t = tokens[i]
+            val tenVal = tens[t]
+            if (tenVal != null) {
+                val next = tokens.getOrNull(i + 1)
+                val onesVal = ones[next]
+                if (onesVal != null && onesVal in 1..9) {
+                    out.add((tenVal + onesVal).toString())
+                    i += 2
+                    continue
+                }
+                out.add(tenVal.toString())
+                i++
+                continue
+            }
+            val onesValStandalone = ones[t]
+            if (onesValStandalone != null) {
+                out.add(onesValStandalone.toString())
+                i++
+                continue
+            }
+            out.add(t)
+            i++
+        }
+        return out.joinToString(" ")
+    }
+
     private fun decode(key: String, value: String): String {
         return when (key) {
             "CL" -> hexToName[value.uppercase()] ?: value
+            "S" -> when (value) {
+                "OS" -> "One Size"
+                else -> value
+            }
             "W" -> when (value) {
                 "30" -> "Wash at 30°"
                 "40" -> "Wash at 40°"
@@ -295,12 +465,19 @@ class NfcFragment : Fragment() {
             else stored
         )
         etStepInput.requestFocus()
+        clearStepError()
 
         layoutSummary.visibility = View.GONE
         btnWrite.visibility = View.GONE
         btnNext.text = if (index == steps.size - 1) "Review" else "Next"
         btnBack.isEnabled = index > 0
         btnBack.alpha = if (index > 0) 1f else 0.4f
+
+        // Skip is available on every step except Name (which is required).
+        val canSkip = step.key != "N"
+        btnSkip.isEnabled = canSkip
+        btnSkip.alpha = if (canSkip) 1f else 0.4f
+        btnSkip.visibility = if (canSkip) View.VISIBLE else View.INVISIBLE
 
         tvQuestion.announceForAccessibility(
             "Step ${index + 1} of ${steps.size}. ${step.question}"

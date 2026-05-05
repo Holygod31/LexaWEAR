@@ -64,7 +64,7 @@
         android:orientation="horizontal"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="8dp"
         android:gravity="center_vertical">
 
         <EditText
@@ -90,6 +90,19 @@
 
     </LinearLayout>
 
+    <!-- Inline error message -->
+    <TextView
+        android:id="@+id/tv_step_error"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="14sp"
+        android:textColor="#D32F2F"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="8dp"
+        android:visibility="gone"
+        android:importantForAccessibility="no" />
+
     <!-- Navigation buttons -->
     <LinearLayout
         android:layout_width="match_parent"
@@ -106,8 +119,19 @@
             android:layout_weight="1"
             android:text="Back"
             android:textSize="16sp"
-            android:layout_marginEnd="8dp"
+            android:layout_marginEnd="4dp"
             android:contentDescription="Go back to previous field" />
+
+        <Button
+            android:id="@+id/btn_skip"
+            android:layout_width="0dp"
+            android:layout_height="64dp"
+            android:layout_weight="1"
+            android:text="Skip"
+            android:textSize="16sp"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp"
+            android:contentDescription="Skip this question" />
 
         <Button
             android:id="@+id/btn_next"
@@ -116,6 +140,7 @@
             android:layout_weight="1"
             android:text="Next"
             android:textSize="16sp"
+            android:layout_marginStart="4dp"
             android:contentDescription="Go to next field" />
 
     </LinearLayout>

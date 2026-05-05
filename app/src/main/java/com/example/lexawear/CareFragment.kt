@@ -166,6 +166,10 @@ class CareFragment : Fragment() {
                 "0" -> "No"
                 else -> value
             }
+            "S" -> when (value) {
+                "OS" -> "One Size"
+                else -> value
+            }
             else -> value
         }
     }
