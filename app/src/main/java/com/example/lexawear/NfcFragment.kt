@@ -1,131 +1,142 @@
 package com.example.lexawear
 
+import android.app.Activity
+import android.content.Intent
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.nfc.tech.Ndef
+import android.nfc.tech.NdefFormatable
 import android.nfc.NdefMessage
 import android.nfc.NdefRecord
 import android.os.Bundle
+import android.speech.RecognizerIntent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
-import android.widget.Spinner
+import android.widget.ScrollView
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
-import android.nfc.tech.NdefFormatable
+import java.util.Locale
 
 class NfcFragment : Fragment() {
 
     private lateinit var tvStatus: TextView
-    private lateinit var etName: EditText
-    private lateinit var etNotes: EditText
+    private lateinit var tvStepIndicator: TextView
+    private lateinit var tvQuestion: TextView
+    private lateinit var etStepInput: EditText
+    private lateinit var btnMic: Button
+    private lateinit var btnBack: Button
+    private lateinit var btnNext: Button
+    private lateinit var layoutSummary: ScrollView
+    private lateinit var tvSummary: TextView
     private lateinit var btnWrite: Button
-
-    private lateinit var spinnerMaterial: Spinner
-    private lateinit var spinnerWash: Spinner
-    private lateinit var spinnerDry: Spinner
-    private lateinit var spinnerIron: Spinner
-    private lateinit var spinnerBleach: Spinner
-    private lateinit var spinnerDryClean: Spinner
 
     private var nfcAdapter: NfcAdapter? = null
     private var isWriting = false
-    private lateinit var spinnerType: Spinner
-    private lateinit var spinnerColor: Spinner
-    private lateinit var spinnerPattern: Spinner
-    private lateinit var spinnerFormality: Spinner
-    private lateinit var spinnerSeason: Spinner
-    private lateinit var etSize: EditText
+
+    // All steps in order
+    private val steps = listOf(
+        Step("N",  "What is this item called?",         "e.g. Blue Winter Jacket"),
+        Step("T",  "What type of clothing is this?",    "e.g. Jacket, Shirt, Pants"),
+        Step("CL", "What color is it?",                 "e.g. Blue, Black, Multicolor"),
+        Step("P",  "What pattern does it have?",        "e.g. Plain, Striped, Checkered"),
+        Step("S",  "What is the size?",                 "e.g. M, L, XL, 32/32"),
+        Step("F",  "How formal is this item?",          "e.g. Casual, Smart Casual, Formal"),
+        Step("SE", "What season is it for?",            "e.g. Winter, Summer, All-Season"),
+        Step("M",  "What material is it made of?",      "e.g. Cotton, Wool, Polyester"),
+        Step("W",  "What is the wash temperature?",     "e.g. 30, 40, 60, Hand Wash"),
+        Step("D",  "How should it be dried?",           "e.g. Air Dry, Tumble Dry, Flat Dry"),
+        Step("I",  "What are the ironing instructions?","e.g. No Iron, Low Heat, High Heat"),
+        Step("B",  "Is bleaching allowed?",             "e.g. Yes, No"),
+        Step("C",  "Can it be dry cleaned?",            "e.g. Yes, No"),
+        Step("X",  "Any extra notes?",                  "e.g. Goes well with black pants")
+    )
+
+    private val answers = mutableMapOf<String, String>()
+    private var currentStep = 0
+
+    data class Step(val key: String, val question: String, val hint: String)
+
+    private val speechLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val spoken = result.data
+                ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                ?.firstOrNull()
+            if (!spoken.isNullOrEmpty()) {
+                etStepInput.setText(spoken)
+                etStepInput.announceForAccessibility("You said: $spoken")
+            }
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
         val view = inflater.inflate(R.layout.fragment_nfc, container, false)
 
-        tvStatus = view.findViewById(R.id.tv_status)
-        etName = view.findViewById(R.id.et_name)
-        etNotes = view.findViewById(R.id.et_notes)
-        btnWrite = view.findViewById(R.id.btn_write)
-        spinnerMaterial = view.findViewById(R.id.spinner_material)
-        spinnerWash = view.findViewById(R.id.spinner_wash)
-        spinnerDry = view.findViewById(R.id.spinner_dry)
-        spinnerIron = view.findViewById(R.id.spinner_iron)
-        spinnerBleach = view.findViewById(R.id.spinner_bleach)
-        spinnerDryClean = view.findViewById(R.id.spinner_dryclean)
-        spinnerType = view.findViewById(R.id.spinner_type)
-        spinnerColor = view.findViewById(R.id.spinner_color)
-        spinnerPattern = view.findViewById(R.id.spinner_pattern)
-        spinnerFormality = view.findViewById(R.id.spinner_formality)
-        spinnerSeason = view.findViewById(R.id.spinner_season)
-        etSize = view.findViewById(R.id.et_size)
-
-        setupSpinner(spinnerMaterial, listOf(
-            "Select material",
-            "Cotton", "Polyester", "Wool", "Silk",
-            "Linen", "Denim", "Synthetic", "Mixed", "Other"
-        ))
-        setupSpinner(spinnerWash, listOf(
-            "Select wash temp",
-            "30°", "40°", "60°",
-            "Hand Wash", "Dry Clean Only", "Do Not Wash"
-        ))
-        setupSpinner(spinnerDry, listOf(
-            "Select drying",
-            "Tumble Dry", "Air Dry", "Flat Dry", "Do Not Dry"
-        ))
-        setupSpinner(spinnerIron, listOf(
-            "Select ironing",
-            "No Iron", "Low Heat", "Medium Heat", "High Heat"
-        ))
-        setupSpinner(spinnerBleach, listOf(
-            "Select bleaching",
-            "Allowed", "Not Allowed"
-        ))
-        setupSpinner(spinnerDryClean, listOf(
-            "Select dry cleaning",
-            "Yes", "No"
-        ))
-        setupSpinner(spinnerType, listOf(
-            "Select type",
-            "Shirt", "T-Shirt", "Sweater", "Jacket", "Coat",
-            "Pants", "Shorts", "Dress", "Skirt", "Underwear",
-            "Socks", "Other"
-        ))
-        setupSpinner(spinnerColor, listOf(
-            "Select color",
-            "Black", "White", "Grey", "Navy", "Blue",
-            "Red", "Green", "Yellow", "Orange", "Pink",
-            "Purple", "Brown", "Beige", "Multicolor"
-        ))
-        setupSpinner(spinnerPattern, listOf(
-            "Select pattern",
-            "Plain", "Striped", "Checkered", "Floral",
-            "Dotted", "Graphic", "Other"
-        ))
-        setupSpinner(spinnerFormality, listOf(
-            "Select formality",
-            "Casual", "Smart Casual", "Formal"
-        ))
-        setupSpinner(spinnerSeason, listOf(
-            "Select season",
-            "Spring", "Summer", "Autumn", "Winter", "All-Season"
-        ))
+        tvStatus       = view.findViewById(R.id.tv_status)
+        tvStepIndicator = view.findViewById(R.id.tv_step_indicator)
+        tvQuestion     = view.findViewById(R.id.tv_question)
+        etStepInput    = view.findViewById(R.id.et_step_input)
+        btnMic         = view.findViewById(R.id.btn_mic)
+        btnBack        = view.findViewById(R.id.btn_back)
+        btnNext        = view.findViewById(R.id.btn_next)
+        layoutSummary  = view.findViewById(R.id.layout_summary)
+        tvSummary      = view.findViewById(R.id.tv_summary)
+        btnWrite       = view.findViewById(R.id.btn_write)
 
         nfcAdapter = NfcAdapter.getDefaultAdapter(requireContext())
         when {
             nfcAdapter == null -> updateStatus("This device does not support NFC.")
             !nfcAdapter!!.isEnabled -> updateStatus("NFC is off. Please enable it in Settings.")
-            else -> updateStatus("Fill in the details and tap Write to Tag.")
+            else -> updateStatus("Answer each question to tag this item.")
+        }
+
+        showStep(0)
+
+        btnNext.setOnClickListener {
+            val input = etStepInput.text.toString().trim()
+            // Save answer (allow empty to skip optional fields)
+            if (input.isNotEmpty()) {
+                answers[steps[currentStep].key] = input
+            } else {
+                answers.remove(steps[currentStep].key)
+            }
+
+            if (currentStep < steps.size - 1) {
+                currentStep++
+                showStep(currentStep)
+            } else {
+                showSummary()
+            }
+        }
+
+        btnBack.setOnClickListener {
+            if (currentStep > 0) {
+                currentStep--
+                showStep(currentStep)
+            }
+        }
+
+        btnMic.setOnClickListener {
+            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                    RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+                putExtra(RecognizerIntent.EXTRA_PROMPT, steps[currentStep].question)
+            }
+            speechLauncher.launch(intent)
         }
 
         btnWrite.setOnClickListener {
-            val name = etName.text.toString().trim()
-            if (name.isEmpty()) {
-                updateStatus("Please enter an item name before writing.")
-                tvStatus.announceForAccessibility("Please enter an item name before writing.")
+            if (answers["N"].isNullOrEmpty()) {
+                updateStatus("Please go back and enter an item name.")
+                tvStatus.announceForAccessibility("Please go back and enter an item name.")
                 return@setOnClickListener
             }
             isWriting = true
@@ -136,14 +147,58 @@ class NfcFragment : Fragment() {
         return view
     }
 
-    private fun setupSpinner(spinner: Spinner, items: List<String>) {
-        val adapter = ArrayAdapter(
-            requireContext(),
-            android.R.layout.simple_spinner_item,
-            items
+    private fun showStep(index: Int) {
+        val step = steps[index]
+        tvStepIndicator.text = "Step ${index + 1} of ${steps.size}"
+        tvQuestion.text = step.question
+        etStepInput.hint = step.hint
+        etStepInput.setText(answers[step.key] ?: "")
+        etStepInput.requestFocus()
+
+        // Hide summary, show input
+        layoutSummary.visibility = View.GONE
+        btnWrite.visibility = View.GONE
+        btnNext.text = if (index == steps.size - 1) "Review" else "Next"
+        btnBack.isEnabled = index > 0
+        btnBack.alpha = if (index > 0) 1f else 0.4f
+
+        tvQuestion.announceForAccessibility(
+            "Step ${index + 1} of ${steps.size}. ${step.question}"
         )
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinner.adapter = adapter
+
+        updateStatus("Answer each question to tag this item.")
+    }
+
+    private fun showSummary() {
+        layoutSummary.visibility = View.VISIBLE
+        btnWrite.visibility = View.VISIBLE
+        btnNext.text = "Next"
+
+        val labelMap = mapOf(
+            "N"  to "Name",
+            "T"  to "Type",
+            "CL" to "Color",
+            "P"  to "Pattern",
+            "S"  to "Size",
+            "F"  to "Formality",
+            "SE" to "Season",
+            "M"  to "Material",
+            "W"  to "Wash",
+            "D"  to "Drying",
+            "I"  to "Ironing",
+            "B"  to "Bleaching",
+            "C"  to "Dry Clean",
+            "X"  to "Notes"
+        )
+
+        val summary = steps
+            .filter { answers[it.key]?.isNotEmpty() == true }
+            .joinToString("\n") { "${labelMap[it.key]}: ${answers[it.key]}" }
+
+        tvSummary.text = summary
+        tvSummary.contentDescription = "Summary. $summary. Tap Write to Tag to continue."
+        tvSummary.announceForAccessibility("Summary. $summary. Tap Write to Tag to save.")
+        updateStatus("Review your answers, then tap Write to Tag.")
     }
 
     fun onTagDiscovered(tag: Tag) {
@@ -161,19 +216,16 @@ class NfcFragment : Fragment() {
 
             when {
                 ndef != null -> {
-                    // Tag already formatted, just write
                     ndef.connect()
                     ndef.writeNdefMessage(ndefMessage)
                     ndef.close()
                 }
                 ndefFormatable != null -> {
-                    // Tag is blank from factory, format AND write in one step
                     ndefFormatable.connect()
                     ndefFormatable.format(ndefMessage)
                     ndefFormatable.close()
                 }
                 else -> {
-                    // Tag is locked or incompatible
                     requireActivity().runOnUiThread {
                         updateStatus("This tag cannot be written to.")
                         tvStatus.announceForAccessibility("This tag cannot be written to.")
@@ -186,6 +238,10 @@ class NfcFragment : Fragment() {
                 updateStatus("Tag written successfully!")
                 tvStatus.announceForAccessibility("Tag written successfully!")
                 isWriting = false
+                // Reset for next item
+                answers.clear()
+                currentStep = 0
+                showStep(0)
             }
 
         } catch (e: Exception) {
@@ -197,56 +253,9 @@ class NfcFragment : Fragment() {
     }
 
     private fun encodeTagData(): String {
-        val parts = mutableListOf<String>()
-
-        val name = etName.text.toString().trim()
-        if (name.isNotEmpty()) parts.add("N:$name")
-
-        val type = selectedOrNull(spinnerType)
-        if (type != null) parts.add("T:$type")
-
-        val color = selectedOrNull(spinnerColor)
-        if (color != null) parts.add("CL:$color")
-
-        val pattern = selectedOrNull(spinnerPattern)
-        if (pattern != null) parts.add("P:$pattern")
-
-        val size = etSize.text.toString().trim()
-        if (size.isNotEmpty()) parts.add("S:$size")
-
-        val formality = selectedOrNull(spinnerFormality)
-        if (formality != null) parts.add("F:$formality")
-
-        val season = selectedOrNull(spinnerSeason)
-        if (season != null) parts.add("SE:$season")
-
-        val material = selectedOrNull(spinnerMaterial)
-        if (material != null) parts.add("M:$material")
-
-        val wash = selectedOrNull(spinnerWash)
-        if (wash != null) parts.add("W:$wash")
-
-        val dry = selectedOrNull(spinnerDry)
-        if (dry != null) parts.add("D:$dry")
-
-        val iron = selectedOrNull(spinnerIron)
-        if (iron != null) parts.add("I:$iron")
-
-        val bleach = selectedOrNull(spinnerBleach)
-        if (bleach != null) parts.add("B:$bleach")
-
-        val dryClean = selectedOrNull(spinnerDryClean)
-        if (dryClean != null) parts.add("C:$dryClean")
-
-        val notes = etNotes.text.toString().trim()
-        if (notes.isNotEmpty()) parts.add("X:$notes")
-
-        return parts.joinToString("|")
-    }
-
-    private fun selectedOrNull(spinner: Spinner): String? {
-        val selected = spinner.selectedItem?.toString() ?: return null
-        return if (selected.startsWith("Select")) null else selected
+        return steps
+            .filter { answers[it.key]?.isNotEmpty() == true }
+            .joinToString("|") { "${it.key}:${answers[it.key]}" }
     }
 
     private fun updateStatus(message: String) {

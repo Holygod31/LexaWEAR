@@ -1,432 +1,146 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="?android:attr/colorBackground">
 
+    <!-- Title -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Write Tag"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="?attr/colorOnBackground"
+        android:layout_margin="16dp" />
+
+    <!-- Status -->
+    <TextView
+        android:id="@+id/tv_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Let's tag a clothing item."
+        android:textSize="14sp"
+        android:textColor="?attr/colorOnSurface"
+        android:gravity="center"
+        android:padding="8dp"
+        android:background="@drawable/status_background"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:accessibilityLiveRegion="polite" />
+
+    <!-- Step indicator -->
+    <TextView
+        android:id="@+id/tv_step_indicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Step 1 of 14"
+        android:textSize="12sp"
+        android:textColor="?attr/colorOnSurface"
+        android:layout_marginStart="16dp"
+        android:layout_marginBottom="4dp" />
+
+    <!-- Question -->
+    <TextView
+        android:id="@+id/tv_question"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="What is this item called?"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="?attr/colorOnBackground"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:accessibilityLiveRegion="polite" />
+
+    <!-- Input field + mic button -->
     <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:gravity="center_vertical">
+
+        <EditText
+            android:id="@+id/et_step_input"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:layout_weight="1"
+            android:textSize="16sp"
+            android:padding="12dp"
+            android:background="@drawable/input_background"
+            android:inputType="textCapSentences"
+            android:contentDescription="Answer input field" />
+
+        <Button
+            android:id="@+id/btn_mic"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginStart="8dp"
+            android:text="🎤"
+            android:textSize="20sp"
+            android:padding="0dp"
+            android:contentDescription="Tap to speak your answer" />
+
+    </LinearLayout>
+
+    <!-- Navigation buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp">
+
+        <Button
+            android:id="@+id/btn_back"
+            android:layout_width="0dp"
+            android:layout_height="64dp"
+            android:layout_weight="1"
+            android:text="Back"
+            android:textSize="16sp"
+            android:layout_marginEnd="8dp"
+            android:contentDescription="Go back to previous field" />
+
+        <Button
+            android:id="@+id/btn_next"
+            android:layout_width="0dp"
+            android:layout_height="64dp"
+            android:layout_weight="1"
+            android:text="Next"
+            android:textSize="16sp"
+            android:contentDescription="Go to next field" />
+
+    </LinearLayout>
+
+    <!-- Summary screen (hidden until final step) -->
+    <ScrollView
+        android:id="@+id/layout_summary"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:visibility="gone">
 
-        <!-- Title -->
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Write Tag"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:textColor="?attr/colorOnBackground"
-            android:layout_marginBottom="8dp" />
-
-        <!-- Status -->
-        <TextView
-            android:id="@+id/tv_status"
+            android:id="@+id/tv_summary"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Fill in the details and tap Write to Tag."
-            android:textSize="14sp"
-            android:textColor="?attr/colorOnSurface"
-            android:gravity="center"
-            android:padding="8dp"
-            android:background="@drawable/status_background"
-            android:layout_marginBottom="12dp"
+            android:textSize="15sp"
+            android:textColor="?attr/colorOnBackground"
+            android:lineSpacingExtra="6dp"
+            android:contentDescription="Summary of entered clothing information"
             android:accessibilityLiveRegion="polite" />
 
-        <!-- Name row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.35"
-                android:text="Name"
-                android:textSize="14sp"
-                android:textColor="?attr/colorOnBackground" />
-
-            <EditText
-                android:id="@+id/et_name"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.65"
-                android:hint="e.g. Blue Jacket"
-                android:textSize="14sp"
-                android:padding="8dp"
-                android:inputType="textCapSentences"
-                android:background="@drawable/input_background"
-                android:contentDescription="Item name input" />
-
-        </LinearLayout>
-        <!-- Type row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.35"
-                android:text="Type"
-                android:textSize="14sp"
-                android:textColor="?attr/colorOnBackground" />
-
-            <Spinner
-                android:id="@+id/spinner_type"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.65"
-                android:background="@drawable/input_background"
-                android:padding="8dp"
-                android:contentDescription="Select clothing type" />
-
-        </LinearLayout>
-
-        <!-- Color row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.35"
-                android:text="Color"
-                android:textSize="14sp"
-                android:textColor="?attr/colorOnBackground" />
-
-            <Spinner
-                android:id="@+id/spinner_color"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.65"
-                android:background="@drawable/input_background"
-                android:padding="8dp"
-                android:contentDescription="Select color" />
-
-        </LinearLayout>
-
-        <!-- Pattern row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.35"
-                android:text="Pattern"
-                android:textSize="14sp"
-                android:textColor="?attr/colorOnBackground" />
-
-            <Spinner
-                android:id="@+id/spinner_pattern"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.65"
-                android:background="@drawable/input_background"
-                android:padding="8dp"
-                android:contentDescription="Select pattern" />
-
-        </LinearLayout>
-
-        <!-- Size row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.35"
-                android:text="Size"
-                android:textSize="14sp"
-                android:textColor="?attr/colorOnBackground" />
-
-            <EditText
-                android:id="@+id/et_size"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.65"
-                android:hint="e.g. M, L, 32/32"
-                android:textSize="14sp"
-                android:padding="8dp"
-                android:inputType="text"
-                android:background="@drawable/input_background"
-                android:contentDescription="Size input" />
-
-        </LinearLayout>
-
-        <!-- Formality row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.35"
-                android:text="Formality"
-                android:textSize="14sp"
-                android:textColor="?attr/colorOnBackground" />
-
-            <Spinner
-                android:id="@+id/spinner_formality"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.65"
-                android:background="@drawable/input_background"
-                android:padding="8dp"
-                android:contentDescription="Select formality" />
-
-        </LinearLayout>
-
-        <!-- Season row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.35"
-                android:text="Season"
-                android:textSize="14sp"
-                android:textColor="?attr/colorOnBackground" />
-
-            <Spinner
-                android:id="@+id/spinner_season"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.65"
-                android:background="@drawable/input_background"
-                android:padding="8dp"
-                android:contentDescription="Select season" />
-
-        </LinearLayout>
-
-        <!-- Material row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.35"
-                android:text="Material"
-                android:textSize="14sp"
-                android:textColor="?attr/colorOnBackground" />
-
-            <Spinner
-                android:id="@+id/spinner_material"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.65"
-                android:background="@drawable/input_background"
-                android:padding="8dp"
-                android:contentDescription="Select material" />
-
-        </LinearLayout>
-
-        <!-- Wash row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.35"
-                android:text="Wash"
-                android:textSize="14sp"
-                android:textColor="?attr/colorOnBackground" />
-
-            <Spinner
-                android:id="@+id/spinner_wash"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.65"
-                android:background="@drawable/input_background"
-                android:padding="8dp"
-                android:contentDescription="Select wash temperature" />
-
-        </LinearLayout>
-
-        <!-- Drying row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.35"
-                android:text="Drying"
-                android:textSize="14sp"
-                android:textColor="?attr/colorOnBackground" />
-
-            <Spinner
-                android:id="@+id/spinner_dry"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.65"
-                android:background="@drawable/input_background"
-                android:padding="8dp"
-                android:contentDescription="Select drying method" />
-
-        </LinearLayout>
-
-        <!-- Ironing row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.35"
-                android:text="Ironing"
-                android:textSize="14sp"
-                android:textColor="?attr/colorOnBackground" />
-
-            <Spinner
-                android:id="@+id/spinner_iron"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.65"
-                android:background="@drawable/input_background"
-                android:padding="8dp"
-                android:contentDescription="Select ironing temperature" />
-
-        </LinearLayout>
-
-        <!-- Bleaching row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.35"
-                android:text="Bleaching"
-                android:textSize="14sp"
-                android:textColor="?attr/colorOnBackground" />
-
-            <Spinner
-                android:id="@+id/spinner_bleach"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.65"
-                android:background="@drawable/input_background"
-                android:padding="8dp"
-                android:contentDescription="Select bleaching option" />
-
-        </LinearLayout>
-
-        <!-- Dry Clean row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.35"
-                android:text="Dry Clean"
-                android:textSize="14sp"
-                android:textColor="?attr/colorOnBackground" />
-
-            <Spinner
-                android:id="@+id/spinner_dryclean"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.65"
-                android:background="@drawable/input_background"
-                android:padding="8dp"
-                android:contentDescription="Select dry cleaning option" />
-
-        </LinearLayout>
-
-        <!-- Notes row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1.5"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.35"
-                android:text="Notes"
-                android:textSize="14sp"
-                android:textColor="?attr/colorOnBackground" />
-
-            <EditText
-                android:id="@+id/et_notes"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.65"
-                android:hint="Extra notes..."
-                android:textSize="14sp"
-                android:padding="8dp"
-                android:inputType="textMultiLine|textCapSentences"
-                android:minLines="2"
-                android:gravity="top"
-                android:background="@drawable/input_background"
-                android:contentDescription="Extra notes input" />
-
-        </LinearLayout>
-
-    </LinearLayout>
+    </ScrollView>
 
     <!-- Write button pinned to bottom -->
     <Button
@@ -436,6 +150,7 @@
         android:text="Write to Tag"
         android:textSize="18sp"
         android:layout_margin="16dp"
+        android:visibility="gone"
         android:contentDescription="Write entered information to NFC tag" />
 
 </LinearLayout>
