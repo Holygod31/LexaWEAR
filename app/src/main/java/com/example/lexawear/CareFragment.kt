@@ -17,11 +17,42 @@ import androidx.fragment.app.Fragment
 class CareFragment : Fragment() {
 
     private lateinit var tvStatus: TextView
+    private lateinit var tvLegacyBanner: TextView
     private lateinit var btnAddToWardrobe: Button
     private lateinit var layoutResults: LinearLayout
 
     private var nfcAdapter: NfcAdapter? = null
     private var lastScannedRaw: String? = null
+
+    // Encoded fields whose values must match a known code; otherwise legacy raw text
+    private val encodedKeys = setOf("T", "CL", "P", "F", "SE", "W", "D", "I", "B", "C", "S")
+
+    private val typeCodeToName = mapOf(
+        "SH" to "Shirt", "TS" to "T-Shirt", "JK" to "Jacket", "CT" to "Coat",
+        "SW" to "Sweater", "HD" to "Hoodie", "BZ" to "Blazer", "SU" to "Suit",
+        "VS" to "Vest", "DR" to "Dress", "UW" to "Underwear", "PT" to "Pants",
+        "JN" to "Jeans", "ST" to "Shorts", "SK" to "Skirt", "SC" to "Socks"
+    )
+
+    private val patternCodeToName = mapOf(
+        "P"  to "Plain", "ST" to "Striped", "CH" to "Checkered", "PL" to "Plaid",
+        "FL" to "Floral", "DT" to "Polka Dot", "GR" to "Graphic",
+        "CM" to "Camouflage", "AN" to "Animal Print"
+    )
+
+    private val formalityComboToName = mapOf(
+        "SC" to "Smart Casual", "BC" to "Business Casual", "SF" to "Smart Formal"
+    )
+    private val formalitySingleToName = mapOf(
+        "C" to "Casual", "B" to "Business", "F" to "Formal",
+        "S" to "Sport", "L" to "Lounge"
+    )
+
+    private val seasonSingleToName = mapOf(
+        "W" to "Winter", "SP" to "Spring", "SU" to "Summer",
+        "A" to "Autumn", "AS" to "All-Season"
+    )
+    private val seasonCodesByLength = listOf("AS", "SP", "SU", "W", "A")
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -29,6 +60,7 @@ class CareFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_care, container, false)
 
         tvStatus         = view.findViewById(R.id.tv_care_status)
+        tvLegacyBanner   = view.findViewById(R.id.tv_legacy_banner)
         btnAddToWardrobe = view.findViewById(R.id.btn_add_to_wardrobe)
         layoutResults    = view.findViewById(R.id.layout_care_results)
 
@@ -95,16 +127,19 @@ class CareFragment : Fragment() {
                 .firstOrNull { it.startsWith("N:") }
                 ?.removePrefix("N:")
 
-            val fields = parseTagData(raw)
+            val parsed = parseTagData(raw)
 
             requireActivity().runOnUiThread {
-                displayCareInfo(fields)
+                displayCareInfo(parsed)
 
                 btnAddToWardrobe.visibility = View.VISIBLE
                 btnAddToWardrobe.contentDescription = "Add $name to wardrobe"
 
-                val announcement = fields.entries.joinToString(". ") { "${it.key}: ${it.value}" }
-                tvStatus.announceForAccessibility("Tag read. $announcement")
+                val announcement = parsed.fields.entries.joinToString(". ") {
+                    "${it.key}: ${it.value.display}"
+                }
+                val legacyNote = if (parsed.hasLegacy) " Old format detected. Consider rewriting this tag." else ""
+                tvStatus.announceForAccessibility("Tag read. $announcement.$legacyNote")
                 updateStatus("Tag read successfully.")
             }
 
@@ -115,66 +150,99 @@ class CareFragment : Fragment() {
         }
     }
 
-    private fun decodeValue(key: String, value: String): String {
+    /** Decoded value with a flag for legacy raw text. */
+    private data class FieldValue(val display: String, val isLegacy: Boolean)
+
+    private data class ParsedTag(
+        val fields: LinkedHashMap<String, FieldValue>,
+        val hasLegacy: Boolean
+    )
+
+    private fun decodeValue(key: String, value: String): FieldValue {
         return when (key) {
-            "CL" -> when (value.uppercase()) {
-                "212121" -> "Black"
-                "F5F5F5" -> "White"
-                "9E9E9E" -> "Grey"
-                "1A237E" -> "Navy"
-                "2196F3" -> "Blue"
-                "F44336" -> "Red"
-                "4CAF50" -> "Green"
-                "FFEB3B" -> "Yellow"
-                "FF9800" -> "Orange"
-                "E91E63" -> "Pink"
-                "9C27B0" -> "Purple"
-                "795548" -> "Brown"
-                "D7CCC8" -> "Beige"
-                "FF5722" -> "Multicolor"
-                else -> value
+            "T" -> typeCodeToName[value.uppercase()]
+                ?.let { FieldValue(it, false) }
+                ?: FieldValue(value, true)
+            "CL" -> {
+                val name = when (value.uppercase()) {
+                    "212121" -> "Black";  "F5F5F5" -> "White"
+                    "9E9E9E" -> "Grey";   "1A237E" -> "Navy"
+                    "2196F3" -> "Blue";   "F44336" -> "Red"
+                    "4CAF50" -> "Green";  "FFEB3B" -> "Yellow"
+                    "FF9800" -> "Orange"; "E91E63" -> "Pink"
+                    "9C27B0" -> "Purple"; "795548" -> "Brown"
+                    "D7CCC8" -> "Beige";  "FF5722" -> "Multicolor"
+                    "607D8B" -> "Other";  else -> null
+                }
+                if (name != null) FieldValue(name, false) else FieldValue(value, true)
             }
-            "W" -> when (value) {
-                "30" -> "Wash at 30°"
-                "40" -> "Wash at 40°"
-                "60" -> "Wash at 60°"
-                "H"  -> "Hand wash"
-                "N"  -> "Do not wash"
-                else -> value
+            "P" -> patternCodeToName[value.uppercase()]
+                ?.let { FieldValue(it, false) }
+                ?: FieldValue(value, true)
+            "F" -> {
+                val v = value.uppercase()
+                val name = formalityComboToName[v] ?: formalitySingleToName[v]
+                if (name != null) FieldValue(name, false) else FieldValue(value, true)
             }
-            "D" -> when (value) {
-                "A" -> "Air dry"
-                "T" -> "Tumble dry"
-                "F" -> "Flat dry"
-                "N" -> "Do not dry"
-                else -> value
+            "SE" -> decodeSeason(value)
+            "S" -> when (value) {
+                "OS" -> FieldValue("One Size", false)
+                else -> FieldValue(value, false)  // Size always free-form
             }
-            "I" -> when (value) {
-                "0" -> "No iron"
-                "1" -> "Low heat"
-                "2" -> "Medium heat"
-                "3" -> "High heat"
-                else -> value
+            "W" -> {
+                val name = when (value) {
+                    "30" -> "Wash at 30°"; "40" -> "Wash at 40°"
+                    "60" -> "Wash at 60°"; "H" -> "Hand wash"
+                    "N"  -> "Do not wash"; else -> null
+                }
+                if (name != null) FieldValue(name, false) else FieldValue(value, true)
+            }
+            "D" -> {
+                val name = when (value) {
+                    "A" -> "Air dry"; "T" -> "Tumble dry"
+                    "F" -> "Flat dry"; "N" -> "Do not dry"
+                    else -> null
+                }
+                if (name != null) FieldValue(name, false) else FieldValue(value, true)
+            }
+            "I" -> {
+                val name = when (value) {
+                    "0" -> "No iron"; "1" -> "Low heat"
+                    "2" -> "Medium heat"; "3" -> "High heat"
+                    else -> null
+                }
+                if (name != null) FieldValue(name, false) else FieldValue(value, true)
             }
             "B" -> when (value) {
-                "1" -> "Yes"
-                "0" -> "No"
-                else -> value
+                "1" -> FieldValue("Yes", false)
+                "0" -> FieldValue("No", false)
+                else -> FieldValue(value, true)
             }
             "C" -> when (value) {
-                "1" -> "Yes"
-                "0" -> "No"
-                else -> value
+                "1" -> FieldValue("Yes", false)
+                "0" -> FieldValue("No", false)
+                else -> FieldValue(value, true)
             }
-            "S" -> when (value) {
-                "OS" -> "One Size"
-                else -> value
-            }
-            else -> value
+            else -> FieldValue(value, false)  // N, M, X are free text by design
         }
     }
 
-    private fun parseTagData(raw: String): Map<String, String> {
+    private fun decodeSeason(value: String): FieldValue {
+        val v = value.uppercase()
+        seasonSingleToName[v]?.let { return FieldValue(it, false) }
+
+        val parts = mutableListOf<String>()
+        var remaining = v
+        while (remaining.isNotEmpty()) {
+            val match = seasonCodesByLength.firstOrNull { remaining.startsWith(it) }
+                ?: return FieldValue(value, true)
+            parts.add(seasonSingleToName[match] ?: return FieldValue(value, true))
+            remaining = remaining.removePrefix(match)
+        }
+        return FieldValue(parts.joinToString("/"), false)
+    }
+
+    private fun parseTagData(raw: String): ParsedTag {
         val labelMap = mapOf(
             "N"  to "Item",
             "T"  to "Type",
@@ -191,29 +259,41 @@ class CareFragment : Fragment() {
             "C"  to "Dry Clean",
             "X"  to "Notes"
         )
-        val result = linkedMapOf<String, String>()
+        val result = linkedMapOf<String, FieldValue>()
+        var anyLegacy = false
         raw.split("|").forEach { part ->
             val key   = part.substringBefore(":")
             val value = part.substringAfter(":")
             val label = labelMap[key]
             if (label != null && value.isNotEmpty()) {
-                result[label] = decodeValue(key, value)
+                val decoded = decodeValue(key, value)
+                if (decoded.isLegacy) anyLegacy = true
+                result[label] = decoded
             }
         }
-        return result
+        return ParsedTag(result, anyLegacy)
     }
 
-    private fun displayCareInfo(fields: Map<String, String>) {
+    private fun displayCareInfo(parsed: ParsedTag) {
         layoutResults.removeAllViews()
 
-        if (fields.isEmpty()) {
+        if (parsed.fields.isEmpty()) {
             updateStatus("No care data found on this tag.")
             return
         }
 
         layoutResults.visibility = View.VISIBLE
 
-        fields.forEach { (label, value) ->
+        if (parsed.hasLegacy) {
+            tvLegacyBanner.text = "⚠ Old format detected. Consider rewriting this tag."
+            tvLegacyBanner.contentDescription =
+                "Warning. Old tag format detected. Consider rewriting this tag."
+            tvLegacyBanner.visibility = View.VISIBLE
+        } else {
+            tvLegacyBanner.visibility = View.GONE
+        }
+
+        parsed.fields.forEach { (label, fv) ->
             val card = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.HORIZONTAL
                 setPadding(16, 20, 16, 20)
@@ -226,7 +306,10 @@ class CareFragment : Fragment() {
                 )
                 params.setMargins(0, 0, 0, 12)
                 layoutParams = params
-                contentDescription = "$label: $value"
+                contentDescription = if (fv.isLegacy)
+                    "$label: ${fv.display}. Old format."
+                else
+                    "$label: ${fv.display}"
             }
 
             val tvLabel = TextView(requireContext()).apply {
@@ -240,8 +323,9 @@ class CareFragment : Fragment() {
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             }
 
+            val displayText = if (fv.isLegacy) "⚠ ${fv.display}" else fv.display
             val tvValue = TextView(requireContext()).apply {
-                text = value
+                text = displayText
                 textSize = 16f
                 setTextColor(
                     if (isDarkMode()) requireContext().getColor(android.R.color.white)

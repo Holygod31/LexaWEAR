@@ -61,13 +61,10 @@ class NfcFragment : Fragment() {
 
     data class Step(val key: String, val question: String, val hint: String)
 
-    // Keys whose interpret() output is the canonical stored form
-    private val interpretedKeys = setOf("CL", "S", "W", "D", "I", "B", "C")
+    private val interpretedKeys = setOf("T", "CL", "P", "S", "F", "SE", "W", "D", "I", "B", "C")
+    private val validatedKeys   = setOf("T", "CL", "P", "S", "F", "SE", "W", "D", "I", "B", "C")
 
-    // Keys that must successfully interpret to a known code; if interpret()
-    // returns the original input (i.e. it didn't recognize anything),
-    // the user is asked to rephrase. Skip is always available as a bailout.
-    private val validatedKeys = setOf("CL", "S", "W", "D", "I", "B", "C")
+    // -------- Lookup tables --------
 
     private val hexToName = mapOf(
         "212121" to "Black",  "F5F5F5" to "White",
@@ -80,16 +77,80 @@ class NfcFragment : Fragment() {
         "607D8B" to "Other"
     )
 
-    // Per-key example phrasing shown in the error message
-    private val rejectionHelp = mapOf(
-        "CL" to "Try a color name like blue, black, or red.",
-        "S"  to "Try a size like medium, large, 32 by 32, or 38.",
-        "W"  to "Try 30, 40, 60, hand wash, or do not wash.",
-        "D"  to "Try air dry, tumble dry, flat dry, or do not dry.",
-        "I"  to "Try no iron, low, medium, or high.",
-        "B"  to "Try yes or no.",
-        "C"  to "Try yes or no."
+    // Type: head-to-toe ordering
+    private val typeCodeToName = linkedMapOf(
+        "SH" to "Shirt",
+        "TS" to "T-Shirt",
+        "JK" to "Jacket",
+        "CT" to "Coat",
+        "SW" to "Sweater",
+        "HD" to "Hoodie",
+        "BZ" to "Blazer",
+        "SU" to "Suit",
+        "VS" to "Vest",
+        "DR" to "Dress",
+        "UW" to "Underwear",
+        "PT" to "Pants",
+        "JN" to "Jeans",
+        "ST" to "Shorts",
+        "SK" to "Skirt",
+        "SC" to "Socks"
     )
+
+    private val patternCodeToName = linkedMapOf(
+        "P"  to "Plain",
+        "ST" to "Striped",
+        "CH" to "Checkered",
+        "PL" to "Plaid",
+        "FL" to "Floral",
+        "DT" to "Polka Dot",
+        "GR" to "Graphic",
+        "CM" to "Camouflage",
+        "AN" to "Animal Print"
+    )
+
+    private val formalitySingleToName = linkedMapOf(
+        "C" to "Casual",
+        "B" to "Business",
+        "F" to "Formal",
+        "S" to "Sport",
+        "L" to "Lounge"
+    )
+
+    // Combos read by concatenation; order in the code reflects input order
+    private val formalityComboToName = mapOf(
+        "SC" to "Smart Casual",
+        "BC" to "Business Casual",
+        "SF" to "Smart Formal"
+    )
+
+    private val seasonSingleToName = linkedMapOf(
+        "W"  to "Winter",
+        "SP" to "Spring",
+        "SU" to "Summer",
+        "A"  to "Autumn",
+        "AS" to "All-Season"
+    )
+
+    // Order matters for combination parsing: longer codes first
+    private val seasonCodesByLength = listOf("AS", "SP", "SU", "W", "A")
+
+    // -------- Rejection messages --------
+
+    private fun rejectionMessage(key: String): String = when (key) {
+        "T"  -> "Try a top like shirt, jacket, or sweater, or a bottom like pants, jeans, or skirt — and more."
+        "CL" -> "Try black, white, grey, navy, blue, red, green, yellow, orange, pink, purple, brown, beige, or multicolor."
+        "P"  -> "Try plain, striped, checkered, plaid, floral, polka dot — and more."
+        "S"  -> "Try a size like medium, large, 32 by 32, or 38."
+        "F"  -> "Try casual, business, formal, sport, lounge, smart casual, business casual, or smart formal."
+        "SE" -> "Try winter, spring, summer, autumn, or all-season. You can combine seasons, like spring and summer."
+        "W"  -> "Try 30, 40, 60, hand wash, or do not wash."
+        "D"  -> "Try air dry, tumble dry, flat dry, or do not dry."
+        "I"  -> "Try no iron, low, medium, or high."
+        "B"  -> "Try yes or no."
+        "C"  -> "Try yes or no."
+        else -> "Please rephrase your answer."
+    }
 
     private val speechLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -136,14 +197,12 @@ class NfcFragment : Fragment() {
             val input = etStepInput.text.toString().trim()
             val key = steps[currentStep].key
 
-            // Name is required.
             if (key == "N" && input.isEmpty()) {
                 showStepError("Please enter a name for this item.")
                 return@setOnClickListener
             }
 
             if (input.isEmpty()) {
-                // Empty + non-required = treat as skip (no answer stored).
                 answers.remove(key)
                 clearStepError()
                 advance()
@@ -152,11 +211,8 @@ class NfcFragment : Fragment() {
 
             val processed = if (key in interpretedKeys) interpret(key, input) else input
 
-            // Reject-and-reprompt: validated fields must produce a known code.
-            // If interpret() returned the original input untouched, it didn't recognize anything.
             if (key in validatedKeys && processed.equals(input, ignoreCase = true)) {
-                val help = rejectionHelp[key] ?: "Please rephrase your answer."
-                showStepError("Sorry, I didn't catch that. $help")
+                showStepError("Sorry, I didn't catch that. ${rejectionMessage(key)}")
                 return@setOnClickListener
             }
 
@@ -217,7 +273,8 @@ class NfcFragment : Fragment() {
     private fun showStepError(message: String) {
         tvStepError.text = message
         tvStepError.visibility = View.VISIBLE
-        tvStepError.announceForAccessibility(message)
+        // Brief announcement for the screen reader, then full message is in inline text
+        tvStepError.announceForAccessibility("Options shown below. $message")
         etStepInput.requestFocus()
     }
 
@@ -226,11 +283,12 @@ class NfcFragment : Fragment() {
         tvStepError.visibility = View.GONE
     }
 
+    // -------- Interpretation --------
+
     private fun interpret(key: String, input: String): String {
         val s = input.lowercase()
             .replace("degrees", "")
             .replace("degree", "")
-            // Expand negation contractions before keyword matching
             .replace("don't",     "do not")
             .replace("dont",      "do not")
             .replace("can't",     "cannot")
@@ -253,24 +311,12 @@ class NfcFragment : Fragment() {
         val isNegated = hasWord("no") || hasWord("not")
 
         return when (key) {
-            "CL" -> when {
-                "black"  in s -> "212121"
-                "white"  in s -> "F5F5F5"
-                "grey"   in s || "gray" in s -> "9E9E9E"
-                "navy"   in s -> "1A237E"
-                "blue"   in s -> "2196F3"
-                "red"    in s -> "F44336"
-                "green"  in s -> "4CAF50"
-                "yellow" in s -> "FFEB3B"
-                "orange" in s -> "FF9800"
-                "pink"   in s -> "E91E63"
-                "purple" in s -> "9C27B0"
-                "brown"  in s -> "795548"
-                "beige"  in s -> "D7CCC8"
-                "multi"  in s -> "FF5722"
-                else -> input
-            }
-            "S" -> interpretSize(input, s)
+            "T"  -> interpretType(input, s)
+            "CL" -> interpretColor(input, s)
+            "P"  -> interpretPattern(input, s)
+            "S"  -> interpretSize(input, s)
+            "F"  -> interpretFormality(input, s)
+            "SE" -> interpretSeason(input, s)
             "W" -> when {
                 isNegated && ("wash" in s || "water" in s) -> "N"
                 "hand" in s -> "H"
@@ -307,40 +353,114 @@ class NfcFragment : Fragment() {
         }
     }
 
-    /**
-     * Size interpreter.
-     * Recognized patterns (in priority order):
-     *   - One-size markers       -> "OS"
-     *   - Letter sizes           -> "XS", "S", "M", "L", "XL", "XXL", "XXXL"
-     *   - Waist/length pairs     -> "W/L" e.g. "32/32"
-     *   - Bare numeric           -> "38", "40", etc.
-     * If nothing matches, returns the original input (caller will reject).
-     * No unit conversion is attempted — what the user says is what gets stored.
-     */
-    private fun interpretSize(rawInput: String, normalized: String): String {
-        val s = normalized
-            .replace("-", " ")
-            .replace(",", " ")
+    private fun interpretColor(rawInput: String, s: String): String = when {
+        "black"  in s -> "212121"
+        "white"  in s -> "F5F5F5"
+        "grey"   in s || "gray" in s -> "9E9E9E"
+        "navy"   in s -> "1A237E"
+        "blue"   in s -> "2196F3"
+        "red"    in s -> "F44336"
+        "green"  in s -> "4CAF50"
+        "yellow" in s -> "FFEB3B"
+        "orange" in s -> "FF9800"
+        "pink"   in s -> "E91E63"
+        "purple" in s -> "9C27B0"
+        "brown"  in s -> "795548"
+        "beige"  in s -> "D7CCC8"
+        "multi"  in s -> "FF5722"
+        else -> rawInput
+    }
 
-        // 1. One-size markers
+    private fun interpretType(rawInput: String, s: String): String = when {
+        "t-shirt" in s || "tshirt" in s || "tee" in s -> "TS"
+        "shirt"     in s -> "SH"
+        "jacket"    in s -> "JK"
+        "coat"      in s -> "CT"
+        "sweater"   in s || "jumper" in s || "pullover" in s -> "SW"
+        "hoodie"    in s -> "HD"
+        "blazer"    in s -> "BZ"
+        "suit"      in s -> "SU"
+        "vest"      in s -> "VS"
+        "dress"     in s -> "DR"
+        "underwear" in s -> "UW"
+        "trouser"   in s || "pants" in s -> "PT"
+        "jeans"     in s -> "JN"
+        "shorts"    in s -> "ST"
+        "skirt"     in s -> "SK"
+        "sock"      in s -> "SC"
+        else -> rawInput
+    }
+
+    private fun interpretPattern(rawInput: String, s: String): String = when {
+        "plain"    in s || "solid"  in s   -> "P"
+        "stripe"   in s                    -> "ST"
+        "check"    in s                    -> "CH"
+        "plaid"    in s || "tartan" in s   -> "PL"
+        "floral"   in s || "flower" in s   -> "FL"
+        "polka"    in s || "dot"    in s   -> "DT"
+        "graphic"  in s || "print"  in s   -> "GR"
+        "camo"     in s                    -> "CM"
+        "animal"   in s || "leopard" in s || "zebra" in s -> "AN"
+        else -> rawInput
+    }
+
+    private fun interpretFormality(rawInput: String, s: String): String {
+        // Combos checked first (longest match wins)
+        val hasSmart    = "smart"    in s
+        val hasBusiness = "business" in s
+        val hasCasual   = "casual"   in s
+        val hasFormal   = "formal"   in s
+        val hasSport    = "sport"    in s || "athletic" in s || "gym" in s
+        val hasLounge   = "lounge"   in s || "sleep" in s || "pyjama" in s || "pajama" in s
+
+        return when {
+            hasSmart && hasCasual    -> "SC"
+            hasBusiness && hasCasual -> "BC"
+            hasSmart && hasFormal    -> "SF"
+            hasCasual                -> "C"
+            hasBusiness              -> "B"
+            hasFormal                -> "F"
+            hasSport                 -> "S"
+            hasLounge                -> "L"
+            else -> rawInput
+        }
+    }
+
+    private fun interpretSeason(rawInput: String, s: String): String {
+        if ("all" in s || "year-round" in s || "year round" in s || "any season" in s) return "AS"
+
+        // Detect each season mentioned, preserving spoken order
+        val mentions = mutableListOf<String>()
+        // Use regex to capture order of appearance
+        val pattern = Regex("\\b(spring|summer|autumn|fall|winter)\\b")
+        for (m in pattern.findAll(s)) {
+            val code = when (m.value) {
+                "spring" -> "SP"
+                "summer" -> "SU"
+                "autumn", "fall" -> "A"
+                "winter" -> "W"
+                else -> continue
+            }
+            if (code !in mentions) mentions.add(code)
+        }
+
+        return if (mentions.isEmpty()) rawInput else mentions.joinToString("")
+    }
+
+    private fun interpretSize(rawInput: String, normalized: String): String {
+        val s = normalized.replace("-", " ").replace(",", " ")
+
         val oneSizePatterns = listOf("one size", "free size", "onesize", "freesize")
         if (oneSizePatterns.any { it in s }) return "OS"
         if (Regex("\\bos\\b").containsMatchIn(s)) return "OS"
 
-        // 2. Word-number normalization for spoken pant sizes
-        //    e.g. "thirty two by thirty two" -> "32 by 32"
         val withDigits = wordsToDigits(s)
 
-        // 3. Waist/length pairs:
-        //    "32/32", "32x32", "32 x 32", "32 by 32"
         Regex("(\\d{2,3})\\s*(?:/|x|by)\\s*(\\d{2,3})")
             .find(withDigits)
             ?.let { return "${it.groupValues[1]}/${it.groupValues[2]}" }
 
-        // 4. Letter sizes — check longest first so "extra large" beats "large".
-        //    Spoken forms: "extra extra large", "double extra large", etc.
         val letterPatterns = listOf(
-            // (regex, canonical code)
             Regex("\\bxxxl\\b|triple\\s*(?:extra\\s*)?large|3xl") to "XXXL",
             Regex("\\bxxl\\b|double\\s*(?:extra\\s*)?large|2xl") to "XXL",
             Regex("\\bxl\\b|extra\\s*large")                    to "XL",
@@ -353,19 +473,13 @@ class NfcFragment : Fragment() {
             if (pattern.containsMatchIn(withDigits)) return code
         }
 
-        // 5. Bare numeric size — extract first 2–3 digit number
         Regex("\\b(\\d{2,3})\\b")
             .find(withDigits)
             ?.let { return it.groupValues[1] }
 
-        // Nothing matched
         return rawInput
     }
 
-    /**
-     * Convert spoken number words to digits within a string.
-     * Handles 0-99 in compound forms like "thirty two", "forty five".
-     */
     private fun wordsToDigits(input: String): String {
         val ones = mapOf(
             "zero" to 0, "one" to 1, "two" to 2, "three" to 3, "four" to 4,
@@ -409,9 +523,15 @@ class NfcFragment : Fragment() {
         return out.joinToString(" ")
     }
 
+    // -------- Decoding --------
+
     private fun decode(key: String, value: String): String {
         return when (key) {
+            "T"  -> typeCodeToName[value.uppercase()] ?: value
             "CL" -> hexToName[value.uppercase()] ?: value
+            "P"  -> patternCodeToName[value.uppercase()] ?: value
+            "F"  -> decodeFormality(value)
+            "SE" -> decodeSeason(value)
             "S" -> when (value) {
                 "OS" -> "One Size"
                 else -> value
@@ -452,6 +572,31 @@ class NfcFragment : Fragment() {
         }
     }
 
+    private fun decodeFormality(value: String): String {
+        val v = value.uppercase()
+        formalityComboToName[v]?.let { return it }
+        formalitySingleToName[v]?.let { return it }
+        return value
+    }
+
+    private fun decodeSeason(value: String): String {
+        val v = value.uppercase()
+        seasonSingleToName[v]?.let { return it }
+
+        // Parse combination: walk the string, peeling off codes longest-first
+        val parts = mutableListOf<String>()
+        var remaining = v
+        while (remaining.isNotEmpty()) {
+            val match = seasonCodesByLength.firstOrNull { remaining.startsWith(it) }
+                ?: return value  // unknown segment -> treat as raw
+            parts.add(seasonSingleToName[match] ?: return value)
+            remaining = remaining.removePrefix(match)
+        }
+        return parts.joinToString("/")
+    }
+
+    // -------- Rest of UI flow --------
+
     private fun showStep(index: Int) {
         val step = steps[index]
         tvStepIndicator.text = "Step ${index + 1} of ${steps.size}"
@@ -473,7 +618,6 @@ class NfcFragment : Fragment() {
         btnBack.isEnabled = index > 0
         btnBack.alpha = if (index > 0) 1f else 0.4f
 
-        // Skip is available on every step except Name (which is required).
         val canSkip = step.key != "N"
         btnSkip.isEnabled = canSkip
         btnSkip.alpha = if (canSkip) 1f else 0.4f

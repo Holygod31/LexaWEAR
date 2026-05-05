@@ -38,7 +38,20 @@
                 android:gravity="center"
                 android:padding="10dp"
                 android:background="@drawable/status_background"
-                android:layout_marginBottom="24dp"
+                android:layout_marginBottom="16dp"
+                android:accessibilityLiveRegion="polite" />
+
+            <!-- Legacy tag warning banner -->
+            <TextView
+                android:id="@+id/tv_legacy_banner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:textColor="#D32F2F"
+                android:padding="12dp"
+                android:background="@drawable/status_background"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone"
                 android:accessibilityLiveRegion="polite" />
 
             <!-- Care info cards -->
