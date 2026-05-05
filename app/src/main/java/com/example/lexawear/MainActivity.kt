@@ -11,7 +11,7 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 class MainActivity : AppCompatActivity() {
 
     private var nfcAdapter: NfcAdapter? = null
-    private lateinit var bottomNav: BottomNavigationView
+    lateinit var bottomNav: BottomNavigationView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -20,7 +20,6 @@ class MainActivity : AppCompatActivity() {
         bottomNav = findViewById(R.id.bottom_navigation)
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
 
-        // Start on the middle tab (NFC)
         if (savedInstanceState == null) {
             bottomNav.selectedItemId = R.id.tab_care
             loadFragment(CareFragment())
@@ -40,7 +39,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Enable NFC foreground dispatch so we catch tags while app is open
         val intent = Intent(this, javaClass).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
         val pendingIntent = PendingIntent.getActivity(
             this, 0, intent,
@@ -70,7 +68,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadFragment(fragment: androidx.fragment.app.Fragment) {
+    fun loadFragment(fragment: androidx.fragment.app.Fragment) {
         supportFragmentManager.beginTransaction()
             .replace(R.id.fragment_container, fragment)
             .commit()
@@ -86,5 +84,13 @@ class MainActivity : AppCompatActivity() {
             loadFragment(wardrobeFragment)
             wardrobeFragment.pendingAddName = name
         }
+    }
+
+    fun applyFiltersFromFilter(type: String, color: String, season: String, formality: String) {
+        val wardrobeFragment = WardrobeFragment().apply {
+            pendingFilters = arrayOf(type, color, season, formality)
+        }
+        bottomNav.selectedItemId = R.id.tab_wardrobe
+        loadFragment(wardrobeFragment)
     }
 }
