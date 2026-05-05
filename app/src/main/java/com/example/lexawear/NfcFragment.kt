@@ -33,6 +33,12 @@ class NfcFragment : Fragment() {
 
     private var nfcAdapter: NfcAdapter? = null
     private var isWriting = false
+    private lateinit var spinnerType: Spinner
+    private lateinit var spinnerColor: Spinner
+    private lateinit var spinnerPattern: Spinner
+    private lateinit var spinnerFormality: Spinner
+    private lateinit var spinnerSeason: Spinner
+    private lateinit var etSize: EditText
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -49,6 +55,12 @@ class NfcFragment : Fragment() {
         spinnerIron = view.findViewById(R.id.spinner_iron)
         spinnerBleach = view.findViewById(R.id.spinner_bleach)
         spinnerDryClean = view.findViewById(R.id.spinner_dryclean)
+        spinnerType = view.findViewById(R.id.spinner_type)
+        spinnerColor = view.findViewById(R.id.spinner_color)
+        spinnerPattern = view.findViewById(R.id.spinner_pattern)
+        spinnerFormality = view.findViewById(R.id.spinner_formality)
+        spinnerSeason = view.findViewById(R.id.spinner_season)
+        etSize = view.findViewById(R.id.et_size)
 
         setupSpinner(spinnerMaterial, listOf(
             "Select material",
@@ -75,6 +87,31 @@ class NfcFragment : Fragment() {
         setupSpinner(spinnerDryClean, listOf(
             "Select dry cleaning",
             "Yes", "No"
+        ))
+        setupSpinner(spinnerType, listOf(
+            "Select type",
+            "Shirt", "T-Shirt", "Sweater", "Jacket", "Coat",
+            "Pants", "Shorts", "Dress", "Skirt", "Underwear",
+            "Socks", "Other"
+        ))
+        setupSpinner(spinnerColor, listOf(
+            "Select color",
+            "Black", "White", "Grey", "Navy", "Blue",
+            "Red", "Green", "Yellow", "Orange", "Pink",
+            "Purple", "Brown", "Beige", "Multicolor"
+        ))
+        setupSpinner(spinnerPattern, listOf(
+            "Select pattern",
+            "Plain", "Striped", "Checkered", "Floral",
+            "Dotted", "Graphic", "Other"
+        ))
+        setupSpinner(spinnerFormality, listOf(
+            "Select formality",
+            "Casual", "Smart Casual", "Formal"
+        ))
+        setupSpinner(spinnerSeason, listOf(
+            "Select season",
+            "Spring", "Summer", "Autumn", "Winter", "All-Season"
         ))
 
         nfcAdapter = NfcAdapter.getDefaultAdapter(requireContext())
@@ -164,6 +201,24 @@ class NfcFragment : Fragment() {
 
         val name = etName.text.toString().trim()
         if (name.isNotEmpty()) parts.add("N:$name")
+
+        val type = selectedOrNull(spinnerType)
+        if (type != null) parts.add("T:$type")
+
+        val color = selectedOrNull(spinnerColor)
+        if (color != null) parts.add("CL:$color")
+
+        val pattern = selectedOrNull(spinnerPattern)
+        if (pattern != null) parts.add("P:$pattern")
+
+        val size = etSize.text.toString().trim()
+        if (size.isNotEmpty()) parts.add("S:$size")
+
+        val formality = selectedOrNull(spinnerFormality)
+        if (formality != null) parts.add("F:$formality")
+
+        val season = selectedOrNull(spinnerSeason)
+        if (season != null) parts.add("SE:$season")
 
         val material = selectedOrNull(spinnerMaterial)
         if (material != null) parts.add("M:$material")

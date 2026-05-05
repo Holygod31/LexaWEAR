@@ -67,6 +67,170 @@
                 android:contentDescription="Item name input" />
 
         </LinearLayout>
+        <!-- Type row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.35"
+                android:text="Type"
+                android:textSize="14sp"
+                android:textColor="?attr/colorOnBackground" />
+
+            <Spinner
+                android:id="@+id/spinner_type"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.65"
+                android:background="@drawable/input_background"
+                android:padding="8dp"
+                android:contentDescription="Select clothing type" />
+
+        </LinearLayout>
+
+        <!-- Color row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.35"
+                android:text="Color"
+                android:textSize="14sp"
+                android:textColor="?attr/colorOnBackground" />
+
+            <Spinner
+                android:id="@+id/spinner_color"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.65"
+                android:background="@drawable/input_background"
+                android:padding="8dp"
+                android:contentDescription="Select color" />
+
+        </LinearLayout>
+
+        <!-- Pattern row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.35"
+                android:text="Pattern"
+                android:textSize="14sp"
+                android:textColor="?attr/colorOnBackground" />
+
+            <Spinner
+                android:id="@+id/spinner_pattern"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.65"
+                android:background="@drawable/input_background"
+                android:padding="8dp"
+                android:contentDescription="Select pattern" />
+
+        </LinearLayout>
+
+        <!-- Size row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.35"
+                android:text="Size"
+                android:textSize="14sp"
+                android:textColor="?attr/colorOnBackground" />
+
+            <EditText
+                android:id="@+id/et_size"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.65"
+                android:hint="e.g. M, L, 32/32"
+                android:textSize="14sp"
+                android:padding="8dp"
+                android:inputType="text"
+                android:background="@drawable/input_background"
+                android:contentDescription="Size input" />
+
+        </LinearLayout>
+
+        <!-- Formality row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.35"
+                android:text="Formality"
+                android:textSize="14sp"
+                android:textColor="?attr/colorOnBackground" />
+
+            <Spinner
+                android:id="@+id/spinner_formality"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.65"
+                android:background="@drawable/input_background"
+                android:padding="8dp"
+                android:contentDescription="Select formality" />
+
+        </LinearLayout>
+
+        <!-- Season row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.35"
+                android:text="Season"
+                android:textSize="14sp"
+                android:textColor="?attr/colorOnBackground" />
+
+            <Spinner
+                android:id="@+id/spinner_season"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.65"
+                android:background="@drawable/input_background"
+                android:padding="8dp"
+                android:contentDescription="Select season" />
+
+        </LinearLayout>
 
         <!-- Material row -->
         <LinearLayout
