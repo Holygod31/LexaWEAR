@@ -410,13 +410,19 @@ class WardrobeFragment : Fragment() {
         activeFilterFormality = formality
 
         filteredItems = items.filter { item ->
-            // color is stored as hex, filter uses color name — convert for comparison
-            val itemColorName = hexToColorName(item.color)
+            // color may be stored as hex OR as a name (legacy items)
+            // normalize to name for comparison
+            val itemColorName = if (item.color.length == 6 && item.color.all { it.isLetterOrDigit() }
+                && !item.color.any { it.isLetter() && it.lowercaseChar() !in 'a'..'f' }) {
+                hexToName[item.color.uppercase()] ?: item.color
+            } else {
+                item.color
+            }
 
-            (type == "All Types"          || item.type.equals(type, ignoreCase = true)) &&
-                    (color == "All Colors"        || itemColorName.equals(color, ignoreCase = true)) &&
-                    (season == "All Seasons"      || item.season.equals(season, ignoreCase = true)) &&
-                    (formality == "All Formality" || item.formality.equals(formality, ignoreCase = true))
+            (type == "All Types"          || item.type.trim().equals(type.trim(), ignoreCase = true)) &&
+                    (color == "All Colors"        || itemColorName.trim().equals(color.trim(), ignoreCase = true)) &&
+                    (season == "All Seasons"      || item.season.trim().equals(season.trim(), ignoreCase = true)) &&
+                    (formality == "All Formality" || item.formality.trim().equals(formality.trim(), ignoreCase = true))
         }.toMutableList()
 
         adapter.notifyDataSetChanged()
@@ -517,19 +523,26 @@ class WardrobeFragment : Fragment() {
             tvName.text = item.name
 
             val colorName = hexToColorName(item.color)
-            tvCategory.text = listOf(item.type, colorName, item.size)
+
+            tvCategory.text = listOf(
+                item.type,
+                colorName,
+                item.size.takeIf { it.isNotEmpty() }?.let { "Size $it" },
+                item.season,
+                item.formality
+            ).filterNotNull()
                 .filter { it.isNotEmpty() }
                 .joinToString(" · ")
 
-            val hexColor = "#${colorNameToHex(colorName)}"
             try {
-                colorDot.setBackgroundColor(Color.parseColor(hexColor))
+                val hex = if (item.color.length == 6) "#${item.color}" else "#607D8B"
+                colorDot.setBackgroundColor(Color.parseColor(hex))
             } catch (e: Exception) {
                 colorDot.setBackgroundColor(Color.parseColor("#607D8B"))
             }
 
             view.contentDescription =
-                "${item.name}, ${item.type}, $colorName, size ${item.size}. Double tap for details."
+                "${item.name}, ${item.type}, $colorName, size ${item.size}, ${item.season}, ${item.formality}. Double tap for details."
             view.isClickable = true
             view.isFocusable = true
             view.setOnClickListener { showItemOptionsDialog(item) }
