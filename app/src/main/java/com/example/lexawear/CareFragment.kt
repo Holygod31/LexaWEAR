@@ -24,7 +24,6 @@ class CareFragment : Fragment() {
     private var nfcAdapter: NfcAdapter? = null
     private var lastScannedRaw: String? = null
 
-    // Encoded fields whose values must match a known code; otherwise legacy raw text
     private val encodedKeys = setOf("T", "CL", "P", "F", "SE", "W", "D", "I", "B", "C", "S")
 
     private val typeCodeToName = mapOf(
@@ -72,8 +71,15 @@ class CareFragment : Fragment() {
             else -> updateStatus("Hold your phone to a clothing tag.")
         }
 
+        // During tutorial step 2 the button is visible so the user can find and tap it.
+        // addToWardrobe in MainActivity handles suppression of the actual navigation.
         btnAddToWardrobe.setOnClickListener {
-            val raw = lastScannedRaw ?: return@setOnClickListener
+            val raw = lastScannedRaw ?: run {
+                // During tutorial the button may be shown without a real scan —
+                // route through MainActivity which handles tutorial suppression.
+                (activity as? MainActivity)?.addToWardrobe("")
+                return@setOnClickListener
+            }
             (activity as? MainActivity)?.addToWardrobe(raw)
         }
 
@@ -82,6 +88,13 @@ class CareFragment : Fragment() {
 
     fun onTagDiscovered(tag: Tag) {
         readTag(tag)
+    }
+
+    // Make Add to Wardrobe button visible for tutorial step 2
+    // even if no tag was scanned yet.
+    fun showAddToWardrobeForTutorial() {
+        btnAddToWardrobe.visibility = View.VISIBLE
+        btnAddToWardrobe.contentDescription = "Add to Wardrobe"
     }
 
     private fun readTag(tag: Tag) {
@@ -150,7 +163,6 @@ class CareFragment : Fragment() {
         }
     }
 
-    /** Decoded value with a flag for legacy raw text. */
     private data class FieldValue(val display: String, val isLegacy: Boolean)
 
     private data class ParsedTag(
@@ -187,7 +199,7 @@ class CareFragment : Fragment() {
             "SE" -> decodeSeason(value)
             "S" -> when (value) {
                 "OS" -> FieldValue("One Size", false)
-                else -> FieldValue(value, false)  // Size always free-form
+                else -> FieldValue(value, false)
             }
             "W" -> {
                 val name = when (value) {
@@ -223,7 +235,7 @@ class CareFragment : Fragment() {
                 "0" -> FieldValue("No", false)
                 else -> FieldValue(value, true)
             }
-            else -> FieldValue(value, false)  // N, M, X are free text by design
+            else -> FieldValue(value, false)
         }
     }
 
@@ -244,20 +256,11 @@ class CareFragment : Fragment() {
 
     private fun parseTagData(raw: String): ParsedTag {
         val labelMap = mapOf(
-            "N"  to "Item",
-            "T"  to "Type",
-            "CL" to "Color",
-            "P"  to "Pattern",
-            "S"  to "Size",
-            "F"  to "Formality",
-            "SE" to "Season",
-            "M"  to "Material",
-            "W"  to "Wash",
-            "D"  to "Drying",
-            "I"  to "Ironing",
-            "B"  to "Bleaching",
-            "C"  to "Dry Clean",
-            "X"  to "Notes"
+            "N"  to "Item",    "T"  to "Type",     "CL" to "Color",
+            "P"  to "Pattern", "S"  to "Size",      "F"  to "Formality",
+            "SE" to "Season",  "M"  to "Material",  "W"  to "Wash",
+            "D"  to "Drying",  "I"  to "Ironing",   "B"  to "Bleaching",
+            "C"  to "Dry Clean", "X" to "Notes"
         )
         val result = linkedMapOf<String, FieldValue>()
         var anyLegacy = false
