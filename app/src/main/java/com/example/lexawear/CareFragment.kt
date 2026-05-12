@@ -19,10 +19,14 @@ class CareFragment : Fragment() {
     private lateinit var tvStatus: TextView
     private lateinit var tvLegacyBanner: TextView
     private lateinit var btnAddToWardrobe: Button
+    private lateinit var btnCamera: Button
     private lateinit var layoutResults: LinearLayout
 
     private var nfcAdapter: NfcAdapter? = null
     private var lastScannedRaw: String? = null
+
+    // Pre-filled results from VisionAnalyzer passed back from CameraFragment
+    var pendingVisionResults: Map<String, String>? = null
 
     private val encodedKeys = setOf("T", "CL", "P", "F", "SE", "W", "D", "I", "B", "C", "S")
 
@@ -61,6 +65,7 @@ class CareFragment : Fragment() {
         tvStatus         = view.findViewById(R.id.tv_care_status)
         tvLegacyBanner   = view.findViewById(R.id.tv_legacy_banner)
         btnAddToWardrobe = view.findViewById(R.id.btn_add_to_wardrobe)
+        btnCamera        = view.findViewById(R.id.btn_camera_care)
         layoutResults    = view.findViewById(R.id.layout_care_results)
 
         nfcAdapter = NfcAdapter.getDefaultAdapter(requireContext())
@@ -69,6 +74,16 @@ class CareFragment : Fragment() {
             nfcAdapter == null -> updateStatus("This device does not support NFC.")
             !nfcAdapter!!.isEnabled -> updateStatus("NFC is off. Please enable it in Settings.")
             else -> updateStatus("Hold your phone to a clothing tag.")
+        }
+
+        btnCamera.setOnClickListener {
+            (activity as? MainActivity)?.openCamera(CameraFragment.Source.CARE)
+        }
+
+        // Display vision results if returning from camera
+        pendingVisionResults?.let { results ->
+            displayVisionResults(results)
+            pendingVisionResults = null
         }
 
         // During tutorial step 2 the button is visible so the user can find and tap it.
@@ -95,6 +110,36 @@ class CareFragment : Fragment() {
     fun showAddToWardrobeForTutorial() {
         btnAddToWardrobe.visibility = View.VISIBLE
         btnAddToWardrobe.contentDescription = "Add to Wardrobe"
+    }
+
+    /**
+     * Display care info from camera vision analysis.
+     * Shows recognized fields in the same card layout as NFC scan results.
+     */
+    fun displayVisionResults(fields: Map<String, String>) {
+        if (fields.isEmpty()) {
+            updateStatus("Camera did not recognize any care information. Try scanning the care label.")
+            return
+        }
+
+        val labelMap = mapOf(
+            "W" to "Wash", "D" to "Drying", "I" to "Ironing",
+            "B" to "Bleaching", "C" to "Dry Clean",
+            "T" to "Type", "CL" to "Color", "P" to "Pattern"
+        )
+
+        val fakeRaw = fields.entries.joinToString("|") { "${it.key}:${it.value}" }
+        val parsed = parseTagData("N:Camera Result|$fakeRaw")
+
+        requireActivity().runOnUiThread {
+            displayCareInfo(parsed)
+            updateStatus("Camera results shown. Scan a tag to get full care info.")
+            tvStatus.announceForAccessibility(
+                "Camera results. " + fields.entries.joinToString(". ") { (k, v) ->
+                    "${labelMap[k] ?: k}: $v"
+                }
+            )
+        }
     }
 
     private fun readTag(tag: Tag) {

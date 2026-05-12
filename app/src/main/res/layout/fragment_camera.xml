@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000">
+
+    <!-- Live camera preview -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/camera_preview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Live result overlay (shown while camera is open) -->
+    <TextView
+        android:id="@+id/tv_camera_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:background="#AA000000"
+        android:textColor="#FFFFFF"
+        android:textSize="15sp"
+        android:padding="16dp"
+        android:text="Point camera at clothing item"
+        android:accessibilityLiveRegion="polite"
+        android:contentDescription="Live recognition results" />
+
+    <!-- Mode indicator -->
+    <TextView
+        android:id="@+id/tv_camera_mode"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_margin="16dp"
+        android:background="#AA1565C0"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp"
+        android:padding="8dp"
+        android:text="Shot 1: Clothing"
+        android:contentDescription="Current camera mode" />
+
+    <!-- Bottom controls -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:background="#AA000000"
+        android:padding="16dp">
+
+        <!-- Confidence / status message -->
+        <TextView
+            android:id="@+id/tv_camera_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#CCFFFFFF"
+            android:textSize="13sp"
+            android:gravity="center"
+            android:layout_marginBottom="12dp"
+            android:text="Analyzing..."
+            android:accessibilityLiveRegion="polite" />
+
+        <!-- Capture + Care label row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <!-- Cancel -->
+            <Button
+                android:id="@+id/btn_camera_cancel"
+                android:layout_width="0dp"
+                android:layout_height="64dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="Cancel"
+                android:textSize="15sp"
+                android:contentDescription="Cancel and go back" />
+
+            <!-- Capture -->
+            <Button
+                android:id="@+id/btn_camera_capture"
+                android:layout_width="0dp"
+                android:layout_height="72dp"
+                android:layout_weight="2"
+                android:text="📷  Capture"
+                android:textSize="17sp"
+                android:layout_marginEnd="8dp"
+                android:contentDescription="Capture image and analyze clothing" />
+
+            <!-- Care label shot -->
+            <Button
+                android:id="@+id/btn_camera_care"
+                android:layout_width="0dp"
+                android:layout_height="64dp"
+                android:layout_weight="1"
+                android:text="Care\nLabel"
+                android:textSize="13sp"
+                android:contentDescription="Switch to care label scanning mode" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</FrameLayout>

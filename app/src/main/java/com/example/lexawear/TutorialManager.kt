@@ -54,14 +54,14 @@ class TutorialManager(
         // ── Care tab ─────────────────────────────────────────────────────────
         TutorialStep(
             tab = R.id.tab_care,
-            title = "1 of 14 — Care Tab",
-            description = "This is the Care tab. Hold your phone to a clothing tag to read its care instructions. Tap Got it to continue.",
+            title = "1 of 15 — Care Tab",
+            description = "This is the Care tab. Hold your phone to a clothing tag to read its care instructions. You can also tap the Scan Care Label button to read a label with the camera. Tap Got it to continue.",
             targetViewId = null,
             nfcLive = true
         ),
         TutorialStep(
             tab = R.id.tab_care,
-            title = "2 of 14 — Add to Wardrobe",
+            title = "2 of 15 — Add to Wardrobe",
             description = "After scanning a tag the Add to Wardrobe button appears at the bottom. Find it and tap it.",
             targetViewId = R.id.btn_add_to_wardrobe,
             nfcLive = true,
@@ -71,7 +71,7 @@ class TutorialManager(
         TutorialStep(
             tab = R.id.tab_nfc,
             title = "3 of 14 — Write Tab",
-            description = "This is the Write tab. Answer questions about a clothing item then hold your phone to a blank NFC tag to save it. Tap Got it to continue.",
+            description = "This is the Write tab. Answer questions about a clothing item then hold your phone to a blank NFC tag to save it. You can also tap the camera button to pre-fill fields automatically. Tap Got it to continue.",
             targetViewId = null
         ),
         TutorialStep(
@@ -83,49 +83,56 @@ class TutorialManager(
         ),
         TutorialStep(
             tab = R.id.tab_nfc,
-            title = "5 of 14 — Next",
+            title = "5 of 14 — Camera",
+            description = "Find the camera button and tap it to scan your clothing item and pre-fill fields automatically.",
+            targetViewId = R.id.btn_camera,
+            suppressNavigation = true
+        ),
+        TutorialStep(
+            tab = R.id.tab_nfc,
+            title = "6 of 14 — Next",
             description = "Find the Next button and tap it to confirm your answer and move to the next question.",
             targetViewId = R.id.btn_next,
             suppressNavigation = true
         ),
         TutorialStep(
             tab = R.id.tab_nfc,
-            title = "6 of 14 — Skip",
+            title = "7 of 14 — Skip",
             description = "Find the Skip button and tap it to leave a question blank and move on.",
             targetViewId = R.id.btn_skip,
             suppressNavigation = true
         ),
         TutorialStep(
             tab = R.id.tab_nfc,
-            title = "7 of 14 — Back",
+            title = "8 of 14 — Back",
             description = "Find the Back button and tap it to return to the previous question.",
             targetViewId = R.id.btn_back,
             suppressNavigation = true
         ),
         TutorialStep(
             tab = R.id.tab_nfc,
-            title = "8 of 14 — Editing Tags",
+            title = "9 of 15 — Editing Tags",
             description = "Tip: scan an existing LexaWEAR tag on this screen to load and edit it. Tap Got it to continue.",
             targetViewId = null
         ),
         // ── Wardrobe tab ─────────────────────────────────────────────────────
         TutorialStep(
             tab = R.id.tab_wardrobe,
-            title = "9 of 14 — Wardrobe Tab",
+            title = "10 of 15 — Wardrobe Tab",
             description = "This is your Wardrobe. Tagged clothing items appear here. Find the Scan Tag button at the bottom and tap it.",
             targetViewId = R.id.btn_wardrobe_scan,
             suppressNavigation = true
         ),
         TutorialStep(
             tab = R.id.tab_wardrobe,
-            title = "10 of 14 — Filters",
+            title = "11 of 15 — Filters",
             description = "Find the Filters button and tap it to open the filter screen.",
             targetViewId = R.id.btn_open_filters,
             suppressNavigation = true
         ),
         TutorialStep(
             tab = R.id.tab_wardrobe,
-            title = "11 of 14 — Voice Filter",
+            title = "12 of 15 — Voice Filter",
             description = "Find the voice filter microphone and tap it to filter your wardrobe by speaking.",
             targetViewId = R.id.btn_voice_filter,
             suppressNavigation = true
@@ -133,7 +140,7 @@ class TutorialManager(
         // ── Filter fragment (loaded directly, no tab switch) ─────────────────
         TutorialStep(
             tab = R.id.tab_wardrobe,
-            title = "12 of 14 — Filter Arrows",
+            title = "13 of 15 — Filter Arrows",
             description = "This is the Filter screen. Arrow buttons cycle through options. Find any Next arrow and tap it.",
             targetViewId = R.id.btn_type_next,
             loadFilterFragment = true,
@@ -141,7 +148,7 @@ class TutorialManager(
         ),
         TutorialStep(
             tab = R.id.tab_wardrobe,
-            title = "13 of 14 — Apply Filters",
+            title = "14 of 15 — Apply Filters",
             description = "Find the Apply button and tap it to apply your filters.",
             targetViewId = R.id.btn_filter_apply,
             keepFilterFragment = true,
@@ -149,7 +156,7 @@ class TutorialManager(
         ),
         TutorialStep(
             tab = R.id.tab_wardrobe,
-            title = "14 of 14 — Clear Filters",
+            title = "15 of 15 — Clear Filters",
             description = "Find the Clear button and tap it to reset all filters.",
             targetViewId = R.id.btn_filter_clear,
             keepFilterFragment = true,
@@ -171,7 +178,8 @@ class TutorialManager(
     // Every interactive button ID across all fragments
     private val allButtonIds = listOf(
         R.id.btn_add_to_wardrobe,
-        R.id.btn_mic, R.id.btn_next, R.id.btn_skip, R.id.btn_back, R.id.btn_write,
+        R.id.btn_camera_care,
+        R.id.btn_mic, R.id.btn_camera, R.id.btn_next, R.id.btn_skip, R.id.btn_back, R.id.btn_write,
         R.id.btn_wardrobe_scan, R.id.btn_open_filters, R.id.btn_voice_filter,
         R.id.btn_type_prev, R.id.btn_type_next,
         R.id.btn_color_prev, R.id.btn_color_next,

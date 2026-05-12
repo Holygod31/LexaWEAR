@@ -8,7 +8,6 @@ import android.os.Bundle
 import android.view.Gravity
 import android.widget.Button
 import android.widget.FrameLayout
-import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
@@ -19,6 +18,9 @@ class MainActivity : AppCompatActivity() {
 
     private var tutorialManager: TutorialManager? = null
     var isTutorialNavigating = false
+
+    // Track which tab was active before camera opened
+    private var preCameraTabId: Int = R.id.tab_care
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,8 +35,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         bottomNav.setOnItemSelectedListener { item ->
-            // Block user-initiated tab switches during tutorial,
-            // but allow switches triggered by the tutorial itself.
             if (tutorialManager?.isActive == true && !isTutorialNavigating) {
                 return@setOnItemSelectedListener false
             }
@@ -50,14 +50,12 @@ class MainActivity : AppCompatActivity() {
 
         setupSettingsButton()
 
-        // Launch tutorial on first run
         if (!TutorialManager.isCompleted(this)) {
             startTutorial()
         }
     }
 
     private fun setupSettingsButton() {
-        // Inject a "Settings" text button into the top-right of the root layout
         val root = findViewById<FrameLayout>(R.id.root_layout)
         val btnSettings = Button(this).apply {
             text = "Settings"
@@ -81,10 +79,7 @@ class MainActivity : AppCompatActivity() {
             .setTitle("Settings")
             .setItems(arrayOf("Replay tutorial")) { _, which ->
                 when (which) {
-                    0 -> {
-                        TutorialManager.reset(this)
-                        startTutorial()
-                    }
+                    0 -> { TutorialManager.reset(this); startTutorial() }
                 }
             }
             .setNegativeButton("Close", null)
@@ -92,18 +87,58 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startTutorial() {
-        tutorialManager = TutorialManager(this) {
-            // Tutorial complete callback — nothing special needed
-            tutorialManager = null
-        }
+        tutorialManager = TutorialManager(this) { tutorialManager = null }
         tutorialManager?.start()
     }
 
-    /** True when tutorial is active and NFC should be suppressed on this step. */
     fun shouldSuppressNfc(): Boolean {
         val tm = tutorialManager ?: return false
         return tm.isActive && !tm.nfcLiveThisStep
     }
+
+    // ── Camera navigation ─────────────────────────────────────────────────────
+
+    fun openCamera(source: CameraFragment.Source) {
+        preCameraTabId = bottomNav.selectedItemId
+        CameraFragment.source = source
+        // Hide bottom nav while camera is open
+        bottomNav.visibility = android.view.View.GONE
+        loadFragment(CameraFragment())
+    }
+
+    fun onCameraResults(fields: Map<String, String>, source: CameraFragment.Source) {
+        bottomNav.visibility = android.view.View.VISIBLE
+        when (source) {
+            CameraFragment.Source.WRITE -> {
+                bottomNav.selectedItemId = R.id.tab_nfc
+                val nfcFragment = NfcFragment().apply {
+                    pendingVisionResults = fields
+                }
+                loadFragment(nfcFragment)
+            }
+            CameraFragment.Source.CARE -> {
+                bottomNav.selectedItemId = R.id.tab_care
+                val careFragment = CareFragment().apply {
+                    pendingVisionResults = fields
+                }
+                loadFragment(careFragment)
+            }
+        }
+    }
+
+    fun onCameraCancel() {
+        bottomNav.visibility = android.view.View.VISIBLE
+        bottomNav.selectedItemId = preCameraTabId
+        val fragment = when (preCameraTabId) {
+            R.id.tab_care     -> CareFragment()
+            R.id.tab_nfc      -> NfcFragment()
+            R.id.tab_wardrobe -> WardrobeFragment()
+            else              -> CareFragment()
+        }
+        loadFragment(fragment)
+    }
+
+    // ── NFC ───────────────────────────────────────────────────────────────────
 
     override fun onResume() {
         super.onResume()
@@ -124,10 +159,7 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         if (intent.action == NfcAdapter.ACTION_TAG_DISCOVERED ||
             intent.action == NfcAdapter.ACTION_NDEF_DISCOVERED) {
-
-            // Suppress NFC during non-NFC tutorial steps
             if (shouldSuppressNfc()) return
-
             val tag = intent.getParcelableExtra<Tag>(NfcAdapter.EXTRA_TAG)
             if (tag != null) {
                 val fragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
@@ -140,6 +172,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // ── Fragment loading ──────────────────────────────────────────────────────
+
     fun loadFragment(fragment: androidx.fragment.app.Fragment) {
         supportFragmentManager.beginTransaction()
             .replace(R.id.fragment_container, fragment)
@@ -147,33 +181,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun addToWardrobe(raw: String) {
-        // Suppress during tutorial
         if (tutorialManager?.isActive == true &&
             tutorialManager?.suppressNavigationThisStep == true) {
             tutorialManager?.onTargetTapped()
             return
         }
-
         val fragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
         if (fragment is WardrobeFragment) {
             fragment.addItemFromRaw(raw)
         } else {
             bottomNav.selectedItemId = R.id.tab_wardrobe
-            val wardrobeFragment = WardrobeFragment().apply {
-                pendingRaw = raw
-            }
+            val wardrobeFragment = WardrobeFragment().apply { pendingRaw = raw }
             loadFragment(wardrobeFragment)
         }
     }
 
     fun applyFiltersFromFilter(type: String, color: String, season: String, formality: String) {
-        // Suppress during tutorial
         if (tutorialManager?.isActive == true &&
             tutorialManager?.suppressNavigationThisStep == true) {
             tutorialManager?.onTargetTapped()
             return
         }
-
         val wardrobeFragment = WardrobeFragment().apply {
             pendingFilters = arrayOf(type, color, season, formality)
         }
