@@ -180,7 +180,8 @@ class NfcFragment : Fragment() {
 
             val processed = if (key in interpretedKeys) interpret(key, input) else input
 
-            if (key in validatedKeys && processed.equals(input, ignoreCase = true)) {
+            // Size is free-form: skip equality check so direct codes like "XL" are accepted.
+            if (key in validatedKeys && key != "S" && processed.equals(input, ignoreCase = true)) {
                 showStepError("Sorry, I didn't catch that. ${rejectionMessage(key)}")
                 return@setOnClickListener
             }
