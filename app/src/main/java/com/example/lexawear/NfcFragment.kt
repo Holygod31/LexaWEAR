@@ -29,6 +29,7 @@ class NfcFragment : Fragment() {
     private lateinit var tvQuestion: TextView
     private lateinit var etStepInput: EditText
     private lateinit var tvStepError: TextView
+    private lateinit var btnShowOptions: Button
     private lateinit var btnMic: Button
     private lateinit var btnBack: Button
     private lateinit var btnSkip: Button
@@ -106,10 +107,11 @@ class NfcFragment : Fragment() {
 
     private val seasonCodesByLength = listOf("AS", "SP", "SU", "W", "A")
 
+    // Short rejection message shown inline — no truncation, no "and more"
     private fun rejectionMessage(key: String): String = when (key) {
-        "T"  -> "Try a top like shirt, jacket, or sweater, or a bottom like pants, jeans, or skirt — and more."
+        "T"  -> "Try saying the clothing type, like shirt, jacket, or pants."
         "CL" -> "Try black, white, grey, navy, blue, red, green, yellow, orange, pink, purple, brown, beige, or multicolor."
-        "P"  -> "Try plain, striped, checkered, plaid, floral, polka dot — and more."
+        "P"  -> "Try saying the pattern, like plain, striped, or checkered."
         "S"  -> "Try a size like medium, large, 32 by 32, or 38."
         "F"  -> "Try casual, business, formal, sport, lounge, smart casual, business casual, or smart formal."
         "SE" -> "Try winter, spring, summer, autumn, or all-season. You can combine seasons, like spring and summer."
@@ -119,6 +121,14 @@ class NfcFragment : Fragment() {
         "B"  -> "Try yes or no."
         "C"  -> "Try yes or no."
         else -> "Please rephrase your answer."
+    }
+
+    // Full options list shown when user taps "Show all options" — only for fields with many choices
+    private fun fullOptionsList(key: String): String? = when (key) {
+        "T"  -> "All clothing types:\nShirt, T-Shirt, Jacket, Coat, Sweater, Hoodie, Blazer, Suit, Vest, Dress, Underwear, Pants, Jeans, Shorts, Skirt, Socks"
+        "P"  -> "All patterns:\nPlain, Striped, Checkered, Plaid, Floral, Polka Dot, Graphic, Camouflage, Animal Print"
+        "CL" -> "All colors:\nBlack, White, Grey, Navy, Blue, Red, Green, Yellow, Orange, Pink, Purple, Brown, Beige, Multicolor"
+        else -> null  // Other fields already list all options in the short message
     }
 
     private val speechLauncher = registerForActivityResult(
@@ -145,6 +155,7 @@ class NfcFragment : Fragment() {
         tvQuestion      = view.findViewById(R.id.tv_question)
         etStepInput     = view.findViewById(R.id.et_step_input)
         tvStepError     = view.findViewById(R.id.tv_step_error)
+        btnShowOptions  = view.findViewById(R.id.btn_show_options)
         btnMic          = view.findViewById(R.id.btn_mic)
         btnBack         = view.findViewById(R.id.btn_back)
         btnSkip         = view.findViewById(R.id.btn_skip)
@@ -167,7 +178,7 @@ class NfcFragment : Fragment() {
             val key = steps[currentStep].key
 
             if (key == "N" && input.isEmpty()) {
-                showStepError("Please enter a name for this item.")
+                showStepError("Please enter a name for this item.", key)
                 return@setOnClickListener
             }
 
@@ -182,7 +193,7 @@ class NfcFragment : Fragment() {
 
             // Size is free-form: skip equality check so direct codes like "XL" are accepted.
             if (key in validatedKeys && key != "S" && processed.equals(input, ignoreCase = true)) {
-                showStepError("Sorry, I didn't catch that. ${rejectionMessage(key)}")
+                showStepError("Sorry, I didn't catch that. ${rejectionMessage(key)}", key)
                 return@setOnClickListener
             }
 
@@ -253,16 +264,41 @@ class NfcFragment : Fragment() {
         }
     }
 
-    private fun showStepError(message: String) {
+    private fun showStepError(message: String, key: String = "") {
         tvStepError.text = message
         tvStepError.visibility = View.VISIBLE
-        tvStepError.announceForAccessibility("Options shown below. $message")
+        tvStepError.announceForAccessibility(message)
+
+        val fullOptions = if (key.isNotEmpty()) fullOptionsList(key) else null
+        if (fullOptions != null) {
+            btnShowOptions.visibility = View.VISIBLE
+            btnShowOptions.text = "Show all options"
+            btnShowOptions.contentDescription = "Show all options. Double tap to expand full list."
+            var expanded = false
+            btnShowOptions.setOnClickListener {
+                expanded = !expanded
+                if (expanded) {
+                    btnShowOptions.text = fullOptions
+                    btnShowOptions.contentDescription = fullOptions + ". Double tap to collapse."
+                    btnShowOptions.announceForAccessibility(fullOptions)
+                } else {
+                    btnShowOptions.text = "Show all options"
+                    btnShowOptions.contentDescription = "Show all options. Double tap to expand full list."
+                    btnShowOptions.announceForAccessibility("Options list collapsed.")
+                }
+            }
+        } else {
+            btnShowOptions.visibility = View.GONE
+        }
+
         etStepInput.requestFocus()
     }
 
     private fun clearStepError() {
         tvStepError.text = ""
         tvStepError.visibility = View.GONE
+        btnShowOptions.visibility = View.GONE
+        btnShowOptions.text = "Show all options"
     }
 
     fun onTagDiscovered(tag: Tag) {

@@ -99,9 +99,26 @@
         android:textColor="#D32F2F"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
+        android:layout_marginBottom="4dp"
+        android:visibility="gone"
+        android:accessibilityLiveRegion="polite" />
+
+    <!-- Show all options button — visible only after a rejection on fields with many options -->
+    <Button
+        android:id="@+id/btn_show_options"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="64dp"
+        android:text="Show all options"
+        android:textSize="15sp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
         android:layout_marginBottom="8dp"
         android:visibility="gone"
-        android:importantForAccessibility="no" />
+        android:gravity="start|center_vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:contentDescription="Show all options. Double tap to expand full list." />
 
     <!-- Navigation buttons -->
     <LinearLayout
