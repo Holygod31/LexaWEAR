@@ -3,16 +3,16 @@
     <item
         android:id="@+id/tab_nfc"
         android:icon="@android:drawable/ic_menu_edit"
-        android:title="Write"
-        android:contentDescription="Write tab - write clothing info to a tag" />
+        android:title="@string/tab_write"
+        android:contentDescription="@string/tab_write_description" />
     <item
         android:id="@+id/tab_care"
         android:icon="@android:drawable/ic_menu_help"
-        android:title="Scan"
-        android:contentDescription="Scan tab - read care instructions from a tag" />
+        android:title="@string/tab_scan"
+        android:contentDescription="@string/tab_scan_description" />
     <item
         android:id="@+id/tab_wardrobe"
         android:icon="@android:drawable/ic_menu_agenda"
-        android:title="Wardrobe"
-        android:contentDescription="Wardrobe tab - manage your clothing items" />
+        android:title="@string/tab_wardrobe"
+        android:contentDescription="@string/tab_wardrobe_description" />
 </menu>

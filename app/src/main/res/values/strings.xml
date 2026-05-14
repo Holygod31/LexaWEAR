@@ -1,3 +1,290 @@
 <resources>
     <string name="app_name">LexaWEAR</string>
+
+    <!-- Settings -->
+    <string name="settings">Settings</string>
+    <string name="settings_content_description">Settings. Double tap to open settings.</string>
+    <string name="settings_replay_tutorial">Replay tutorial</string>
+    <string name="settings_close">Close</string>
+    <string name="settings_select_language">Select language</string>
+
+    <!-- Bottom nav -->
+    <string name="tab_write">Write</string>
+    <string name="tab_write_description">Write tab - write clothing info to a tag</string>
+    <string name="tab_scan">Scan</string>
+    <string name="tab_scan_description">Scan tab - read care instructions from a tag</string>
+    <string name="tab_wardrobe">Wardrobe</string>
+    <string name="tab_wardrobe_description">Wardrobe tab - manage your clothing items</string>
+
+    <!-- NFC / device status -->
+    <string name="nfc_not_supported">This device does not support NFC.</string>
+    <string name="nfc_disabled">NFC is off. Please enable it in Settings.</string>
+    <string name="tag_empty_write">Tag is empty. Use the Write tab to add clothing info.</string>
+    <string name="tag_not_lexawear">This tag was not written by LexaWEAR.</string>
+    <string name="tag_read_success">Tag read successfully.</string>
+    <string name="tag_error_reading">Error reading tag: %s</string>
+    <string name="tag_error_writing">Error writing tag: %s</string>
+    <string name="tag_cannot_write">This tag cannot be written to.</string>
+    <string name="tag_written_success">Tag written successfully!</string>
+
+    <!-- Care fragment -->
+    <string name="care_title">Care Instructions</string>
+    <string name="care_status_default">Hold your phone to a clothing tag.</string>
+    <string name="care_legacy_warning">⚠ Old format detected. Consider rewriting this tag.</string>
+    <string name="care_legacy_warning_description">Warning. Old tag format detected. Consider rewriting this tag.</string>
+    <string name="care_no_data">No care data found on this tag.</string>
+    <string name="care_camera_no_results">Camera did not recognize any care information. Try scanning the care label.</string>
+    <string name="care_camera_results_status">Camera results shown. Scan a tag to get full care info.</string>
+    <string name="btn_add_to_wardrobe">Add to Wardrobe</string>
+    <string name="btn_add_to_wardrobe_description">Add this clothing item to your wardrobe</string>
+    <string name="btn_add_named_description">Add %s to wardrobe</string>
+    <string name="btn_camera_care">📷  Scan Care Label</string>
+    <string name="btn_camera_care_description">Open camera to scan care label symbols and text</string>
+
+    <!-- Write (NFC) fragment -->
+    <string name="write_title">Write Tag</string>
+    <string name="write_status_default">Let\'s tag a clothing item.</string>
+    <string name="write_status_scan_or_answer">Scan a tag to edit it, or answer each question to write a new one.</string>
+    <string name="write_status_answer">Answer each question to tag this item.</string>
+    <string name="write_status_review">Review your answers, then tap Write to Tag.</string>
+    <string name="write_status_hold_tag">Hold your phone to an NFC tag to write to it.</string>
+    <string name="write_status_hold_overwrite">Hold your phone to the tag to overwrite it.</string>
+    <string name="write_status_prefilled">Fields pre-filled from camera. Review and adjust if needed.</string>
+    <string name="write_status_needs_name">Please go back and enter an item name.</string>
+    <string name="write_tag_empty_answer">Tag is empty. Answer each question to write a new one.</string>
+    <string name="write_tag_loaded">Tag loaded. Edit any field, then tap Write to Tag.</string>
+    <string name="write_tag_loaded_accessibility">Tag loaded for editing.</string>
+    <string name="step_indicator">Step %1$d of %2$d</string>
+    <string name="btn_back">Back</string>
+    <string name="btn_back_description">Go back to previous field</string>
+    <string name="btn_skip">Skip</string>
+    <string name="btn_skip_description">Skip this question</string>
+    <string name="btn_next">Next</string>
+    <string name="btn_next_description">Go to next field</string>
+    <string name="btn_review">Review</string>
+    <string name="btn_write">Write to Tag</string>
+    <string name="btn_write_description">Write entered information to NFC tag</string>
+    <string name="btn_mic_description">Tap to speak your answer</string>
+    <string name="btn_camera_description">Tap to scan clothing with camera and pre-fill fields</string>
+    <string name="input_description">Answer input field</string>
+    <string name="btn_show_options">Show all options</string>
+    <string name="btn_show_options_description">Show all options. Double tap to expand full list.</string>
+    <string name="dialog_overwrite_title">Overwrite Tag?</string>
+    <string name="dialog_overwrite_message">This will replace all existing data on the tag. Continue?</string>
+    <string name="dialog_overwrite_confirm">Overwrite</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="dialog_tag_found_title">Tag Found</string>
+    <string name="dialog_tag_found_load">Load this tag for editing?</string>
+    <string name="dialog_tag_found_load_discard">Load this tag for editing? This will discard your current progress.</string>
+    <string name="dialog_load">Load</string>
+    <string name="summary_description">Summary of entered clothing information</string>
+
+    <!-- Wardrobe fragment -->
+    <string name="wardrobe_title">Wardrobe</string>
+    <string name="wardrobe_status_default">Scan a tag to add an item.</string>
+    <string name="wardrobe_status_count">%d item(s) in wardrobe.</string>
+    <string name="wardrobe_status_count_scan">%d item(s) in wardrobe. Scan a tag to add.</string>
+    <string name="wardrobe_status_shown">%d item(s) shown.</string>
+    <string name="wardrobe_status_hold_tag">Hold your phone to a clothing tag.</string>
+    <string name="wardrobe_status_hold_tag_accessibility">Hold your phone to a clothing tag to add it to your wardrobe.</string>
+    <string name="wardrobe_tag_empty">Tag is empty or unreadable.</string>
+    <string name="wardrobe_tag_write_first">Tag is empty. Write to it first using the Write tab.</string>
+    <string name="wardrobe_legacy_banner">⚠ %d item(s) use the old format. Consider rewriting them.</string>
+    <string name="wardrobe_legacy_banner_description">Warning. ⚠ %d item(s) use the old format. Consider rewriting them.</string>
+    <string name="wardrobe_no_filters">No filters active</string>
+    <string name="wardrobe_active_filters">Filters: %s</string>
+    <string name="btn_filters">Filters</string>
+    <string name="btn_filters_description">Open filter options</string>
+    <string name="btn_voice_filter_description">Tap to filter by voice</string>
+    <string name="btn_scan_tag">Scan Tag to Add Item</string>
+    <string name="btn_scan_tag_description">Scan NFC tag to add clothing item to wardrobe</string>
+    <string name="dialog_add_wardrobe_title">Add to Wardrobe?</string>
+    <string name="dialog_add">Add</string>
+    <string name="dialog_item_added_accessibility">%s added to wardrobe.</string>
+    <string name="dialog_item_removed_accessibility">%s removed from wardrobe.</string>
+    <string name="dialog_delete_title">Delete Item</string>
+    <string name="dialog_delete_message">Remove \"%s\" from your wardrobe?</string>
+    <string name="dialog_delete_confirm">Delete</string>
+    <string name="dialog_close">Close</string>
+    <string name="item_double_tap">Double tap for details.</string>
+    <string name="voice_filter_prompt">Describe what you\'re looking for</string>
+    <string name="size_label">Size %s</string>
+
+    <!-- Filter fragment -->
+    <string name="filter_title">Filters</string>
+    <string name="filter_type_label">Type</string>
+    <string name="filter_color_label">Color</string>
+    <string name="filter_season_label">Season</string>
+    <string name="filter_formality_label">Formality</string>
+    <string name="btn_filter_apply">Apply</string>
+    <string name="btn_filter_apply_description">Apply filters and return to wardrobe</string>
+    <string name="btn_filter_clear">Clear</string>
+    <string name="btn_filter_clear_description">Clear all filters</string>
+    <string name="btn_prev_type">Previous type</string>
+    <string name="btn_next_type">Next type</string>
+    <string name="btn_prev_color">Previous color</string>
+    <string name="btn_next_color">Next color</string>
+    <string name="btn_prev_season">Previous season</string>
+    <string name="btn_next_season">Next season</string>
+    <string name="btn_prev_formality">Previous formality</string>
+    <string name="btn_next_formality">Next formality</string>
+
+    <!-- Field labels (used in Care and Write) -->
+    <string name="field_item">Item</string>
+    <string name="field_type">Type</string>
+    <string name="field_color">Color</string>
+    <string name="field_pattern">Pattern</string>
+    <string name="field_size">Size</string>
+    <string name="field_formality">Formality</string>
+    <string name="field_season">Season</string>
+    <string name="field_material">Material</string>
+    <string name="field_wash">Wash</string>
+    <string name="field_drying">Drying</string>
+    <string name="field_ironing">Ironing</string>
+    <string name="field_bleaching">Bleaching</string>
+    <string name="field_dry_clean">Dry Clean</string>
+    <string name="field_notes">Notes</string>
+
+    <!-- Decoded values -->
+    <string name="wash_30">Wash at 30°</string>
+    <string name="wash_40">Wash at 40°</string>
+    <string name="wash_60">Wash at 60°</string>
+    <string name="wash_hand">Hand wash</string>
+    <string name="wash_no">Do not wash</string>
+    <string name="dry_air">Air dry</string>
+    <string name="dry_tumble">Tumble dry</string>
+    <string name="dry_flat">Flat dry</string>
+    <string name="dry_no">Do not dry</string>
+    <string name="iron_no">No iron</string>
+    <string name="iron_low">Low heat</string>
+    <string name="iron_medium">Medium heat</string>
+    <string name="iron_high">High heat</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="one_size">One Size</string>
+
+    <!-- Clothing types -->
+    <string name="type_shirt">Shirt</string>
+    <string name="type_tshirt">T-Shirt</string>
+    <string name="type_jacket">Jacket</string>
+    <string name="type_coat">Coat</string>
+    <string name="type_sweater">Sweater</string>
+    <string name="type_hoodie">Hoodie</string>
+    <string name="type_blazer">Blazer</string>
+    <string name="type_suit">Suit</string>
+    <string name="type_vest">Vest</string>
+    <string name="type_dress">Dress</string>
+    <string name="type_underwear">Underwear</string>
+    <string name="type_pants">Pants</string>
+    <string name="type_jeans">Jeans</string>
+    <string name="type_shorts">Shorts</string>
+    <string name="type_skirt">Skirt</string>
+    <string name="type_socks">Socks</string>
+
+    <!-- Patterns -->
+    <string name="pattern_plain">Plain</string>
+    <string name="pattern_striped">Striped</string>
+    <string name="pattern_checkered">Checkered</string>
+    <string name="pattern_plaid">Plaid</string>
+    <string name="pattern_floral">Floral</string>
+    <string name="pattern_polkadot">Polka Dot</string>
+    <string name="pattern_graphic">Graphic</string>
+    <string name="pattern_camouflage">Camouflage</string>
+    <string name="pattern_animal">Animal Print</string>
+
+    <!-- Colors -->
+    <string name="color_black">Black</string>
+    <string name="color_white">White</string>
+    <string name="color_grey">Grey</string>
+    <string name="color_navy">Navy</string>
+    <string name="color_blue">Blue</string>
+    <string name="color_red">Red</string>
+    <string name="color_green">Green</string>
+    <string name="color_yellow">Yellow</string>
+    <string name="color_orange">Orange</string>
+    <string name="color_pink">Pink</string>
+    <string name="color_purple">Purple</string>
+    <string name="color_brown">Brown</string>
+    <string name="color_beige">Beige</string>
+    <string name="color_multicolor">Multicolor</string>
+    <string name="color_other">Other</string>
+
+    <!-- Formality -->
+    <string name="formality_casual">Casual</string>
+    <string name="formality_business">Business</string>
+    <string name="formality_formal">Formal</string>
+    <string name="formality_sport">Sport</string>
+    <string name="formality_lounge">Lounge</string>
+    <string name="formality_smart_casual">Smart Casual</string>
+    <string name="formality_business_casual">Business Casual</string>
+    <string name="formality_smart_formal">Smart Formal</string>
+
+    <!-- Seasons -->
+    <string name="season_winter">Winter</string>
+    <string name="season_spring">Spring</string>
+    <string name="season_summer">Summer</string>
+    <string name="season_autumn">Autumn</string>
+    <string name="season_all">All-Season</string>
+
+    <!-- Write step questions -->
+    <string name="step_q_name">What is this item called?</string>
+    <string name="step_q_type">What type of clothing is this?</string>
+    <string name="step_q_color">What color is it?</string>
+    <string name="step_q_pattern">What pattern does it have?</string>
+    <string name="step_q_size">What is the size?</string>
+    <string name="step_q_formality">How formal is this item?</string>
+    <string name="step_q_season">What season is it for?</string>
+    <string name="step_q_material">What material is it made of?</string>
+    <string name="step_q_wash">What is the wash temperature?</string>
+    <string name="step_q_dry">How should it be dried?</string>
+    <string name="step_q_iron">What are the ironing instructions?</string>
+    <string name="step_q_bleach">Is bleaching allowed?</string>
+    <string name="step_q_dry_clean">Can it be dry cleaned?</string>
+    <string name="step_q_notes">Any extra notes?</string>
+
+    <!-- Write step hints -->
+    <string name="step_h_name">e.g. Blue Winter Jacket</string>
+    <string name="step_h_type">e.g. Jacket, Shirt, Pants</string>
+    <string name="step_h_color">e.g. Blue, Black, Multicolor</string>
+    <string name="step_h_pattern">e.g. Plain, Striped, Checkered</string>
+    <string name="step_h_size">e.g. M, L, XL, 32/32, 38</string>
+    <string name="step_h_formality">e.g. Casual, Smart Casual, Formal</string>
+    <string name="step_h_season">e.g. Winter, Summer, All-Season</string>
+    <string name="step_h_material">e.g. Cotton, Wool, Polyester</string>
+    <string name="step_h_wash">e.g. 30, 40, 60, Hand Wash</string>
+    <string name="step_h_dry">e.g. Air, Tumble, Flat</string>
+    <string name="step_h_iron">e.g. No Iron, Low, High</string>
+    <string name="step_h_bleach">e.g. Yes, No</string>
+    <string name="step_h_dry_clean">e.g. Yes, No</string>
+    <string name="step_h_notes">e.g. Goes well with black pants</string>
+
+    <!-- Write rejection messages -->
+    <string name="write_error_name_required">Please enter a name for this item.</string>
+    <string name="write_error_not_recognized">Sorry, I didn\'t catch that.</string>
+    <string name="reject_type">Try saying the clothing type, like shirt, jacket, or pants.</string>
+    <string name="reject_color">Try black, white, grey, navy, blue, red, green, yellow, orange, pink, purple, brown, beige, or multicolor.</string>
+    <string name="reject_pattern">Try saying the pattern, like plain, striped, or checkered.</string>
+    <string name="reject_size">Try a size like medium, large, 32 by 32, or 38.</string>
+    <string name="reject_formality">Try casual, business, formal, sport, lounge, smart casual, business casual, or smart formal.</string>
+    <string name="reject_season">Try winter, spring, summer, autumn, or all-season. You can combine seasons, like spring and summer.</string>
+    <string name="reject_wash">Try 30, 40, 60, hand wash, or do not wash.</string>
+    <string name="reject_dry">Try air dry, tumble dry, flat dry, or do not dry.</string>
+    <string name="reject_iron">Try no iron, low, medium, or high.</string>
+    <string name="reject_yes_no">Try yes or no.</string>
+    <string name="reject_default">Please rephrase your answer.</string>
+
+    <!-- Full options lists -->
+    <string name="options_type">All clothing types:\nShirt, T-Shirt, Jacket, Coat, Sweater, Hoodie, Blazer, Suit, Vest, Dress, Underwear, Pants, Jeans, Shorts, Skirt, Socks</string>
+    <string name="options_pattern">All patterns:\nPlain, Striped, Checkered, Plaid, Floral, Polka Dot, Graphic, Camouflage, Animal Print</string>
+    <string name="options_color">All colors:\nBlack, White, Grey, Navy, Blue, Red, Green, Yellow, Orange, Pink, Purple, Brown, Beige, Multicolor</string>
+    <string name="options_collapsed">Options list collapsed.</string>
+
+    <string name="wardrobe_unknown_item">Unknown Item</string>
+    <string name="wardrobe_legacy_rewrite">⚠ Old format. Rewriting this tag is recommended.</string>
+    <string name="wardrobe_items_shown">%d items shown.</string>
+
+    <string name="filter_all_types">All Types</string>
+    <string name="filter_all_colors">All Colors</string>
+    <string name="filter_all_seasons">All Seasons</string>
+    <string name="filter_all_formality">All Formality</string>
 </resources>

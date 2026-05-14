@@ -15,65 +15,64 @@ class FilterFragment : Fragment() {
     private lateinit var tvSeasonValue: TextView
     private lateinit var tvFormalityValue: TextView
 
-    // Each option: code stored, label displayed. Empty code = "All X".
     private data class Option(val code: String, val label: String)
 
-    private val typeOptions = listOf(
-        Option("",   "All Types"),
-        Option("SH", "Shirt"),
-        Option("TS", "T-Shirt"),
-        Option("JK", "Jacket"),
-        Option("CT", "Coat"),
-        Option("SW", "Sweater"),
-        Option("HD", "Hoodie"),
-        Option("BZ", "Blazer"),
-        Option("SU", "Suit"),
-        Option("VS", "Vest"),
-        Option("DR", "Dress"),
-        Option("UW", "Underwear"),
-        Option("PT", "Pants"),
-        Option("JN", "Jeans"),
-        Option("ST", "Shorts"),
-        Option("SK", "Skirt"),
-        Option("SC", "Socks")
+    private val typeOptions get() = listOf(
+        Option("",   getString(R.string.filter_all_types)),
+        Option("SH", getString(R.string.type_shirt)),
+        Option("TS", getString(R.string.type_tshirt)),
+        Option("JK", getString(R.string.type_jacket)),
+        Option("CT", getString(R.string.type_coat)),
+        Option("SW", getString(R.string.type_sweater)),
+        Option("HD", getString(R.string.type_hoodie)),
+        Option("BZ", getString(R.string.type_blazer)),
+        Option("SU", getString(R.string.type_suit)),
+        Option("VS", getString(R.string.type_vest)),
+        Option("DR", getString(R.string.type_dress)),
+        Option("UW", getString(R.string.type_underwear)),
+        Option("PT", getString(R.string.type_pants)),
+        Option("JN", getString(R.string.type_jeans)),
+        Option("ST", getString(R.string.type_shorts)),
+        Option("SK", getString(R.string.type_skirt)),
+        Option("SC", getString(R.string.type_socks))
     )
 
-    private val colorOptions = listOf(
-        Option("",       "All Colors"),
-        Option("212121", "Black"),
-        Option("F5F5F5", "White"),
-        Option("9E9E9E", "Grey"),
-        Option("1A237E", "Navy"),
-        Option("2196F3", "Blue"),
-        Option("F44336", "Red"),
-        Option("4CAF50", "Green"),
-        Option("FFEB3B", "Yellow"),
-        Option("FF9800", "Orange"),
-        Option("E91E63", "Pink"),
-        Option("9C27B0", "Purple"),
-        Option("795548", "Brown"),
-        Option("D7CCC8", "Beige"),
-        Option("FF5722", "Multicolor")
+    private val colorOptions get() = listOf(
+        Option("",       getString(R.string.filter_all_colors)),
+        Option("212121", getString(R.string.color_black)),
+        Option("F5F5F5", getString(R.string.color_white)),
+        Option("9E9E9E", getString(R.string.color_grey)),
+        Option("1A237E", getString(R.string.color_navy)),
+        Option("2196F3", getString(R.string.color_blue)),
+        Option("F44336", getString(R.string.color_red)),
+        Option("4CAF50", getString(R.string.color_green)),
+        Option("FFEB3B", getString(R.string.color_yellow)),
+        Option("FF9800", getString(R.string.color_orange)),
+        Option("E91E63", getString(R.string.color_pink)),
+        Option("9C27B0", getString(R.string.color_purple)),
+        Option("795548", getString(R.string.color_brown)),
+        Option("D7CCC8", getString(R.string.color_beige)),
+        Option("FF5722", getString(R.string.color_multicolor))
     )
 
-    private val seasonOptions = listOf(
-        Option("",   "All Seasons"),
-        Option("SP", "Spring"),
-        Option("SU", "Summer"),
-        Option("A",  "Autumn"),
-        Option("W",  "Winter")
+    private val seasonOptions get() = listOf(
+        Option("",   getString(R.string.filter_all_seasons)),
+        Option("SP", getString(R.string.season_spring)),
+        Option("SU", getString(R.string.season_summer)),
+        Option("A",  getString(R.string.season_autumn)),
+        Option("W",  getString(R.string.season_winter))
     )
 
-    private val formalityOptions = listOf(
-        Option("",   "All Formality"),
-        Option("C",  "Casual"),
-        Option("SC", "Smart Casual"),
-        Option("BC", "Business Casual"),
-        Option("B",  "Business"),
-        Option("SF", "Smart Formal"),
-        Option("F",  "Formal"),
-        Option("S",  "Sport"),
-        Option("L",  "Lounge")
+    private val formalityOptions get() = listOf(
+        Option("",   getString(R.string.filter_all_formality)),
+        Option("C",  getString(R.string.formality_casual)),
+        Option("SC", getString(R.string.formality_smart_casual)),
+        Option("BC", getString(R.string.formality_business_casual)),
+        Option("B",  getString(R.string.formality_business)),
+        Option("SF", getString(R.string.formality_smart_formal)),
+        Option("F",  getString(R.string.formality_formal)),
+        Option("S",  getString(R.string.formality_sport)),
+        Option("L",  getString(R.string.formality_lounge))
     )
 
     private var typeIndex      = 0

@@ -24,19 +24,19 @@ import java.util.Locale
 data class WardrobeItem(
     val id: Long,
     var name: String,
-    var type: String,         // code: SH, JK, etc.
-    var color: String,        // hex: 2196F3, etc.
-    var pattern: String,      // code: P, ST, etc.
-    var size: String,         // code: M, OS, 32/32, 38, etc.
-    var formality: String,    // code: C, SC, BC, etc.
-    var season: String,       // code: W, WSU, AS, etc.
-    var material: String,     // free text
-    var wash: String,         // code: 30, 40, 60, H, N
-    var dry: String,          // code: A, T, F, N
-    var iron: String,         // code: 0, 1, 2, 3
-    var bleach: String,       // code: 0, 1
-    var dryClean: String,     // code: 0, 1
-    var notes: String,        // free text
+    var type: String,
+    var color: String,
+    var pattern: String,
+    var size: String,
+    var formality: String,
+    var season: String,
+    var material: String,
+    var wash: String,
+    var dry: String,
+    var iron: String,
+    var bleach: String,
+    var dryClean: String,
+    var notes: String,
     var isLegacy: Boolean = false
 )
 
@@ -60,50 +60,82 @@ class WardrobeFragment : Fragment() {
     private var filteredItems = mutableListOf<WardrobeItem>()
     private lateinit var adapter: WardrobeAdapter
 
-    // Filter state stores CODES, not display names
-    private var activeFilterTypeCode      = ""  // empty = "All Types"
+    private var activeFilterTypeCode      = ""
     private var activeFilterColorHex      = ""
     private var activeFilterSeasonCode    = ""
     private var activeFilterFormalityCode = ""
 
     // -------- Lookup tables --------
 
-    private val typeCodeToName = linkedMapOf(
-        "SH" to "Shirt", "TS" to "T-Shirt", "JK" to "Jacket", "CT" to "Coat",
-        "SW" to "Sweater", "HD" to "Hoodie", "BZ" to "Blazer", "SU" to "Suit",
-        "VS" to "Vest", "DR" to "Dress", "UW" to "Underwear", "PT" to "Pants",
-        "JN" to "Jeans", "ST" to "Shorts", "SK" to "Skirt", "SC" to "Socks"
+    private val typeCodeToName get() = linkedMapOf(
+        "SH" to getString(R.string.type_shirt),
+        "TS" to getString(R.string.type_tshirt),
+        "JK" to getString(R.string.type_jacket),
+        "CT" to getString(R.string.type_coat),
+        "SW" to getString(R.string.type_sweater),
+        "HD" to getString(R.string.type_hoodie),
+        "BZ" to getString(R.string.type_blazer),
+        "SU" to getString(R.string.type_suit),
+        "VS" to getString(R.string.type_vest),
+        "DR" to getString(R.string.type_dress),
+        "UW" to getString(R.string.type_underwear),
+        "PT" to getString(R.string.type_pants),
+        "JN" to getString(R.string.type_jeans),
+        "ST" to getString(R.string.type_shorts),
+        "SK" to getString(R.string.type_skirt),
+        "SC" to getString(R.string.type_socks)
     )
 
-    private val patternCodeToName = mapOf(
-        "P"  to "Plain", "ST" to "Striped", "CH" to "Checkered", "PL" to "Plaid",
-        "FL" to "Floral", "DT" to "Polka Dot", "GR" to "Graphic",
-        "CM" to "Camouflage", "AN" to "Animal Print"
+    private val patternCodeToName get() = mapOf(
+        "P"  to getString(R.string.pattern_plain),
+        "ST" to getString(R.string.pattern_striped),
+        "CH" to getString(R.string.pattern_checkered),
+        "PL" to getString(R.string.pattern_plaid),
+        "FL" to getString(R.string.pattern_floral),
+        "DT" to getString(R.string.pattern_polkadot),
+        "GR" to getString(R.string.pattern_graphic),
+        "CM" to getString(R.string.pattern_camouflage),
+        "AN" to getString(R.string.pattern_animal)
     )
 
-    private val formalityComboToName = mapOf(
-        "SC" to "Smart Casual", "BC" to "Business Casual", "SF" to "Smart Formal"
+    private val formalityComboToName get() = mapOf(
+        "SC" to getString(R.string.formality_smart_casual),
+        "BC" to getString(R.string.formality_business_casual),
+        "SF" to getString(R.string.formality_smart_formal)
     )
-    private val formalitySingleToName = linkedMapOf(
-        "C" to "Casual", "B" to "Business", "F" to "Formal",
-        "S" to "Sport", "L" to "Lounge"
+    private val formalitySingleToName get() = linkedMapOf(
+        "C" to getString(R.string.formality_casual),
+        "B" to getString(R.string.formality_business),
+        "F" to getString(R.string.formality_formal),
+        "S" to getString(R.string.formality_sport),
+        "L" to getString(R.string.formality_lounge)
     )
 
-    private val seasonSingleToName = linkedMapOf(
-        "W" to "Winter", "SP" to "Spring", "SU" to "Summer",
-        "A" to "Autumn", "AS" to "All-Season"
+    private val seasonSingleToName get() = linkedMapOf(
+        "W"  to getString(R.string.season_winter),
+        "SP" to getString(R.string.season_spring),
+        "SU" to getString(R.string.season_summer),
+        "A"  to getString(R.string.season_autumn),
+        "AS" to getString(R.string.season_all)
     )
     private val seasonCodesByLength = listOf("AS", "SP", "SU", "W", "A")
 
-    private val hexToName = linkedMapOf(
-        "212121" to "Black",  "F5F5F5" to "White",
-        "9E9E9E" to "Grey",   "1A237E" to "Navy",
-        "2196F3" to "Blue",   "F44336" to "Red",
-        "4CAF50" to "Green",  "FFEB3B" to "Yellow",
-        "FF9800" to "Orange", "E91E63" to "Pink",
-        "9C27B0" to "Purple", "795548" to "Brown",
-        "D7CCC8" to "Beige",  "FF5722" to "Multicolor",
-        "607D8B" to "Other"
+    private val hexToName get() = linkedMapOf(
+        "212121" to getString(R.string.color_black),
+        "F5F5F5" to getString(R.string.color_white),
+        "9E9E9E" to getString(R.string.color_grey),
+        "1A237E" to getString(R.string.color_navy),
+        "2196F3" to getString(R.string.color_blue),
+        "F44336" to getString(R.string.color_red),
+        "4CAF50" to getString(R.string.color_green),
+        "FFEB3B" to getString(R.string.color_yellow),
+        "FF9800" to getString(R.string.color_orange),
+        "E91E63" to getString(R.string.color_pink),
+        "9C27B0" to getString(R.string.color_purple),
+        "795548" to getString(R.string.color_brown),
+        "D7CCC8" to getString(R.string.color_beige),
+        "FF5722" to getString(R.string.color_multicolor),
+        "607D8B" to getString(R.string.color_other)
     )
 
     // -------- Decoders --------
@@ -129,7 +161,6 @@ class WardrobeFragment : Fragment() {
         return parts.joinToString("/") { seasonSingleToName[it] ?: it }
     }
 
-    /** Parses a season code into its component codes. Returns null if invalid. */
     private fun parseSeasonComponents(code: String): List<String>? {
         val v = code.uppercase()
         val parts = mutableListOf<String>()
@@ -143,20 +174,22 @@ class WardrobeFragment : Fragment() {
     }
 
     private fun decodeWash(code: String): String = when (code) {
-        "30" -> "Wash at 30°"; "40" -> "Wash at 40°"; "60" -> "Wash at 60°"
-        "H" -> "Hand wash"; "N" -> "Do not wash"
-        else -> code
+        "30" -> getString(R.string.wash_30); "40" -> getString(R.string.wash_40)
+        "60" -> getString(R.string.wash_60); "H"  -> getString(R.string.wash_hand)
+        "N"  -> getString(R.string.wash_no); else -> code
     }
     private fun decodeDry(code: String): String = when (code) {
-        "A" -> "Air dry"; "T" -> "Tumble dry"; "F" -> "Flat dry"; "N" -> "Do not dry"
+        "A" -> getString(R.string.dry_air);   "T" -> getString(R.string.dry_tumble)
+        "F" -> getString(R.string.dry_flat);  "N" -> getString(R.string.dry_no)
         else -> code
     }
     private fun decodeIron(code: String): String = when (code) {
-        "0" -> "No iron"; "1" -> "Low heat"; "2" -> "Medium heat"; "3" -> "High heat"
+        "0" -> getString(R.string.iron_no);   "1" -> getString(R.string.iron_low)
+        "2" -> getString(R.string.iron_medium); "3" -> getString(R.string.iron_high)
         else -> code
     }
     private fun decodeYesNo(code: String): String = when (code) {
-        "1" -> "Yes"; "0" -> "No"; else -> code
+        "1" -> getString(R.string.yes); "0" -> getString(R.string.no); else -> code
     }
 
     // -------- Legacy detection --------
@@ -273,9 +306,9 @@ class WardrobeFragment : Fragment() {
         listView.adapter = adapter
 
         when {
-            nfcAdapter == null -> updateStatus("This device does not support NFC.")
-            !nfcAdapter!!.isEnabled -> updateStatus("NFC is off. Please enable it in Settings.")
-            else -> updateStatus("${items.size} item(s) in wardrobe. Scan a tag to add.")
+            nfcAdapter == null      -> updateStatus(getString(R.string.nfc_not_supported))
+            !nfcAdapter!!.isEnabled -> updateStatus(getString(R.string.nfc_disabled))
+            else -> updateStatus(getString(R.string.wardrobe_status_count_scan, items.size))
         }
 
         btnOpenFilters.setOnClickListener {
@@ -293,31 +326,20 @@ class WardrobeFragment : Fragment() {
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                     RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
-                putExtra(RecognizerIntent.EXTRA_PROMPT, "Describe what you're looking for")
+                putExtra(RecognizerIntent.EXTRA_PROMPT, getString(R.string.voice_filter_prompt))
             }
             voiceFilterLauncher.launch(intent)
         }
 
         btnScan.setOnClickListener {
             isScanning = true
-            updateStatus("Hold your phone to a clothing tag.")
-            tvStatus.announceForAccessibility("Hold your phone to a clothing tag to add it to your wardrobe.")
+            updateStatus(getString(R.string.wardrobe_status_hold_tag))
+            tvStatus.announceForAccessibility(getString(R.string.wardrobe_status_hold_tag_accessibility))
         }
 
-        pendingAddName?.let {
-            showAddDialog(it)
-            pendingAddName = null
-        }
-
-        pendingRaw?.let {
-            addItemFromRaw(it)
-            pendingRaw = null
-        }
-
-        pendingFilters?.let {
-            applyFilters(it[0], it[1], it[2], it[3])
-            pendingFilters = null
-        }
+        pendingAddName?.let { showAddDialog(it); pendingAddName = null }
+        pendingRaw?.let { addItemFromRaw(it); pendingRaw = null }
+        pendingFilters?.let { applyFilters(it[0], it[1], it[2], it[3]); pendingFilters = null }
 
         return view
     }
@@ -328,7 +350,7 @@ class WardrobeFragment : Fragment() {
         try {
             val ndef = Ndef.get(tag) ?: run {
                 requireActivity().runOnUiThread {
-                    updateStatus("Tag is empty or unreadable.")
+                    updateStatus(getString(R.string.wardrobe_tag_empty))
                     isScanning = false
                 }
                 return
@@ -340,7 +362,7 @@ class WardrobeFragment : Fragment() {
 
             if (message == null) {
                 requireActivity().runOnUiThread {
-                    updateStatus("Tag is empty. Write to it first using the Write tab.")
+                    updateStatus(getString(R.string.wardrobe_tag_write_first))
                     isScanning = false
                 }
                 return
@@ -353,7 +375,7 @@ class WardrobeFragment : Fragment() {
 
             if (!raw.contains("N:")) {
                 requireActivity().runOnUiThread {
-                    updateStatus("This tag was not written by LexaWEAR.")
+                    updateStatus(getString(R.string.tag_not_lexawear))
                     isScanning = false
                 }
                 return
@@ -368,7 +390,7 @@ class WardrobeFragment : Fragment() {
 
         } catch (e: Exception) {
             requireActivity().runOnUiThread {
-                updateStatus("Error reading tag: ${e.message}")
+                updateStatus(getString(R.string.tag_error_reading, e.message))
                 isScanning = false
             }
         }
@@ -384,7 +406,7 @@ class WardrobeFragment : Fragment() {
         val hasLegacy = legacyKeys.any { isLegacyValue(it, tagData[it] ?: "") }
         return WardrobeItem(
             id        = System.currentTimeMillis(),
-            name      = tagData["N"]  ?: "Unknown Item",
+            name      = tagData["N"]  ?: getString(R.string.wardrobe_unknown_item),
             type      = tagData["T"]  ?: "",
             color     = tagData["CL"] ?: "",
             pattern   = tagData["P"]  ?: "",
@@ -414,93 +436,94 @@ class WardrobeFragment : Fragment() {
 
     private fun showConfirmDialog(item: WardrobeItem) {
         val summary = listOf(
-            "Name"      to item.name,
-            "Type"      to decodeType(item.type),
-            "Color"     to decodeColor(item.color),
-            "Size"      to item.size,
-            "Season"    to decodeSeason(item.season),
-            "Formality" to decodeFormality(item.formality),
-            "Material"  to item.material
+            getString(R.string.field_item)      to item.name,
+            getString(R.string.field_type)      to decodeType(item.type),
+            getString(R.string.field_color)     to decodeColor(item.color),
+            getString(R.string.field_size)      to item.size,
+            getString(R.string.field_season)    to decodeSeason(item.season),
+            getString(R.string.field_formality) to decodeFormality(item.formality),
+            getString(R.string.field_material)  to item.material
         ).filter { it.second.isNotEmpty() }
             .joinToString("\n") { "${it.first}: ${it.second}" }
 
+        val message = if (item.isLegacy)
+            "$summary\n\n${getString(R.string.care_legacy_warning)}" else summary
+
         AlertDialog.Builder(requireContext())
-            .setTitle("Add to Wardrobe?")
-            .setMessage(if (item.isLegacy) "$summary\n\n⚠ Old format detected. Consider rewriting this tag." else summary)
-            .setPositiveButton("Add") { _, _ ->
+            .setTitle(getString(R.string.dialog_add_wardrobe_title))
+            .setMessage(message)
+            .setPositiveButton(getString(R.string.dialog_add)) { _, _ ->
                 items.add(item)
                 saveItems()
                 updateLegacyBanner()
                 applyFilters()
-                updateStatus("${items.size} item(s) in wardrobe.")
-                tvStatus.announceForAccessibility("${item.name} added to wardrobe.")
+                updateStatus(getString(R.string.wardrobe_status_count, items.size))
+                tvStatus.announceForAccessibility(
+                    getString(R.string.dialog_item_added_accessibility, item.name))
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(getString(R.string.dialog_cancel), null)
             .show()
     }
 
     fun showAddDialog(nameFromTag: String) {
         val item = WardrobeItem(
-            id        = System.currentTimeMillis(),
-            name      = nameFromTag,
-            type      = "", color = "", pattern = "",
-            size      = "", formality = "", season = "",
-            material  = "", wash = "", dry = "", iron = "",
-            bleach    = "", dryClean = "", notes = ""
+            id = System.currentTimeMillis(), name = nameFromTag,
+            type = "", color = "", pattern = "", size = "", formality = "",
+            season = "", material = "", wash = "", dry = "", iron = "",
+            bleach = "", dryClean = "", notes = ""
         )
         showConfirmDialog(item)
     }
 
     private fun showItemOptionsDialog(item: WardrobeItem) {
         val summary = listOf(
-            "Type"      to decodeType(item.type),
-            "Color"     to decodeColor(item.color),
-            "Pattern"   to decodePattern(item.pattern),
-            "Size"      to item.size,
-            "Season"    to decodeSeason(item.season),
-            "Formality" to decodeFormality(item.formality),
-            "Material"  to item.material,
-            "Wash"      to decodeWash(item.wash),
-            "Dry"       to decodeDry(item.dry),
-            "Iron"      to decodeIron(item.iron),
-            "Bleach"    to decodeYesNo(item.bleach),
-            "Dry Clean" to decodeYesNo(item.dryClean),
-            "Notes"     to item.notes
+            getString(R.string.field_type)      to decodeType(item.type),
+            getString(R.string.field_color)     to decodeColor(item.color),
+            getString(R.string.field_pattern)   to decodePattern(item.pattern),
+            getString(R.string.field_size)      to item.size,
+            getString(R.string.field_season)    to decodeSeason(item.season),
+            getString(R.string.field_formality) to decodeFormality(item.formality),
+            getString(R.string.field_material)  to item.material,
+            getString(R.string.field_wash)      to decodeWash(item.wash),
+            getString(R.string.field_drying)    to decodeDry(item.dry),
+            getString(R.string.field_ironing)   to decodeIron(item.iron),
+            getString(R.string.field_bleaching) to decodeYesNo(item.bleach),
+            getString(R.string.field_dry_clean) to decodeYesNo(item.dryClean),
+            getString(R.string.field_notes)     to item.notes
         ).filter { it.second.isNotEmpty() }
             .joinToString("\n") { "${it.first}: ${it.second}" }
 
         val title = if (item.isLegacy) "⚠ ${item.name}" else item.name
-        val body = if (item.isLegacy) "$summary\n\n⚠ Old format. Rewriting this tag is recommended." else summary
+        val body  = if (item.isLegacy)
+            "$summary\n\n${getString(R.string.wardrobe_legacy_rewrite)}" else summary
 
         AlertDialog.Builder(requireContext())
             .setTitle(title)
             .setMessage(body)
-            .setPositiveButton("Delete") { _, _ -> showDeleteDialog(item) }
-            .setNegativeButton("Close", null)
+            .setPositiveButton(getString(R.string.dialog_delete_confirm)) { _, _ ->
+                showDeleteDialog(item)
+            }
+            .setNegativeButton(getString(R.string.dialog_close), null)
             .show()
     }
 
     private fun showDeleteDialog(item: WardrobeItem) {
         AlertDialog.Builder(requireContext())
-            .setTitle("Delete Item")
-            .setMessage("Remove \"${item.name}\" from your wardrobe?")
-            .setPositiveButton("Delete") { _, _ ->
+            .setTitle(getString(R.string.dialog_delete_title))
+            .setMessage(getString(R.string.dialog_delete_message, item.name))
+            .setPositiveButton(getString(R.string.dialog_delete_confirm)) { _, _ ->
                 items.remove(item)
                 saveItems()
                 updateLegacyBanner()
                 applyFilters()
-                updateStatus("${items.size} item(s) in wardrobe.")
-                tvStatus.announceForAccessibility("${item.name} removed from wardrobe.")
+                updateStatus(getString(R.string.wardrobe_status_count, items.size))
+                tvStatus.announceForAccessibility(
+                    getString(R.string.dialog_item_removed_accessibility, item.name))
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(getString(R.string.dialog_cancel), null)
             .show()
     }
 
-    /**
-     * Filter codes ("" means no filter for that field).
-     * Legacy items always pass all filters.
-     * All-season items always pass the season filter.
-     */
     fun applyFilters(
         typeCode: String      = activeFilterTypeCode,
         colorHex: String      = activeFilterColorHex,
@@ -514,20 +537,12 @@ class WardrobeFragment : Fragment() {
 
         filteredItems = items.filter { item ->
             if (item.isLegacy) return@filter true
-
-            val typeOk = typeCode.isEmpty() ||
-                    item.type.equals(typeCode, ignoreCase = true)
-
-            val colorOk = colorHex.isEmpty() ||
-                    item.color.equals(colorHex, ignoreCase = true)
-
-            val seasonOk = seasonCode.isEmpty() ||
-                    item.season.equals("AS", ignoreCase = true) ||
+            val typeOk     = typeCode.isEmpty()     || item.type.equals(typeCode, ignoreCase = true)
+            val colorOk    = colorHex.isEmpty()     || item.color.equals(colorHex, ignoreCase = true)
+            val seasonOk   = seasonCode.isEmpty()   || item.season.equals("AS", ignoreCase = true) ||
                     seasonContains(item.season, seasonCode)
-
             val formalityOk = formalityCode.isEmpty() ||
                     item.formality.equals(formalityCode, ignoreCase = true)
-
             typeOk && colorOk && seasonOk && formalityOk
         }.toMutableList()
 
@@ -540,17 +555,18 @@ class WardrobeFragment : Fragment() {
             decodeFormality(formalityCode).takeIf { formalityCode.isNotEmpty() }
         )
 
-        val filterText = if (activeList.isEmpty()) "No filters active"
-        else "Filters: ${activeList.joinToString(", ")}"
+        val filterText = if (activeList.isEmpty())
+            getString(R.string.wardrobe_no_filters)
+        else
+            getString(R.string.wardrobe_active_filters, activeList.joinToString(", "))
 
         tvActiveFilters.text = filterText
         tvActiveFilters.announceForAccessibility(
-            "$filterText. ${filteredItems.size} items shown."
+            "$filterText. ${getString(R.string.wardrobe_items_shown, filteredItems.size)}"
         )
-        updateStatus("${filteredItems.size} item(s) shown.")
+        updateStatus(getString(R.string.wardrobe_status_shown, filteredItems.size))
     }
 
-    /** True if itemSeason's component codes include filterSeason. */
     private fun seasonContains(itemSeason: String, filterSeason: String): Boolean {
         val components = parseSeasonComponents(itemSeason) ?: return false
         return components.any { it.equals(filterSeason, ignoreCase = true) }
@@ -559,9 +575,10 @@ class WardrobeFragment : Fragment() {
     private fun updateLegacyBanner() {
         val legacyCount = items.count { it.isLegacy }
         if (legacyCount > 0) {
-            val msg = "⚠ $legacyCount item(s) use the old format. Consider rewriting them."
+            val msg = getString(R.string.wardrobe_legacy_banner, legacyCount)
             tvLegacyBanner.text = msg
-            tvLegacyBanner.contentDescription = "Warning. $msg"
+            tvLegacyBanner.contentDescription =
+                getString(R.string.wardrobe_legacy_banner_description, legacyCount)
             tvLegacyBanner.visibility = View.VISIBLE
         } else {
             tvLegacyBanner.visibility = View.GONE
@@ -572,39 +589,28 @@ class WardrobeFragment : Fragment() {
         val arr = JSONArray()
         items.forEach { item ->
             val obj = JSONObject()
-            obj.put("id",        item.id)
-            obj.put("name",      item.name)
-            obj.put("type",      item.type)
-            obj.put("color",     item.color)
-            obj.put("pattern",   item.pattern)
-            obj.put("size",      item.size)
-            obj.put("formality", item.formality)
-            obj.put("season",    item.season)
-            obj.put("material",  item.material)
-            obj.put("wash",      item.wash)
-            obj.put("dry",       item.dry)
-            obj.put("iron",      item.iron)
-            obj.put("bleach",    item.bleach)
-            obj.put("dryClean",  item.dryClean)
-            obj.put("notes",     item.notes)
-            obj.put("isLegacy",  item.isLegacy)
+            obj.put("id", item.id); obj.put("name", item.name)
+            obj.put("type", item.type); obj.put("color", item.color)
+            obj.put("pattern", item.pattern); obj.put("size", item.size)
+            obj.put("formality", item.formality); obj.put("season", item.season)
+            obj.put("material", item.material); obj.put("wash", item.wash)
+            obj.put("dry", item.dry); obj.put("iron", item.iron)
+            obj.put("bleach", item.bleach); obj.put("dryClean", item.dryClean)
+            obj.put("notes", item.notes); obj.put("isLegacy", item.isLegacy)
             arr.put(obj)
         }
         requireContext()
             .getSharedPreferences("wardrobe", Context.MODE_PRIVATE)
-            .edit()
-            .putString("items", arr.toString())
-            .apply()
+            .edit().putString("items", arr.toString()).apply()
     }
 
     private fun loadItems() {
-        val prefs = requireContext()
-            .getSharedPreferences("wardrobe", Context.MODE_PRIVATE)
-        val json = prefs.getString("items", "[]") ?: "[]"
-        val arr = JSONArray(json)
+        val prefs = requireContext().getSharedPreferences("wardrobe", Context.MODE_PRIVATE)
+        val json  = prefs.getString("items", "[]") ?: "[]"
+        val arr   = JSONArray(json)
         items.clear()
         for (i in 0 until arr.length()) {
-            val obj = arr.getJSONObject(i)
+            val obj  = arr.getJSONObject(i)
             val item = WardrobeItem(
                 id        = obj.getLong("id"),
                 name      = obj.optString("name"),
@@ -623,7 +629,6 @@ class WardrobeFragment : Fragment() {
                 notes     = obj.optString("notes"),
                 isLegacy  = obj.optBoolean("isLegacy", false)
             )
-            // Re-evaluate legacy on load (catches items saved before isLegacy existed)
             if (!obj.has("isLegacy")) {
                 val keys = mapOf(
                     "T" to item.type, "P" to item.pattern, "CL" to item.color,
@@ -669,7 +674,8 @@ class WardrobeFragment : Fragment() {
                 typeName.takeIf { it.isNotEmpty() },
                 colorName.takeIf { it.isNotEmpty() },
                 patternName.takeIf { it.isNotEmpty() },
-                item.size.takeIf { it.isNotEmpty() }?.let { "Size $it" },
+                item.size.takeIf { it.isNotEmpty() }
+                    ?.let { getString(R.string.size_label, it) },
                 seasonName.takeIf { it.isNotEmpty() },
                 formalityName.takeIf { it.isNotEmpty() }
             ).joinToString(" · ")
@@ -686,10 +692,11 @@ class WardrobeFragment : Fragment() {
                 item.name,
                 typeName.takeIf { it.isNotEmpty() },
                 colorName.takeIf { it.isNotEmpty() },
-                item.size.takeIf { it.isNotEmpty() }?.let { "size $it" },
+                item.size.takeIf { it.isNotEmpty() }
+                    ?.let { getString(R.string.size_label, it) },
                 seasonName.takeIf { it.isNotEmpty() },
                 formalityName.takeIf { it.isNotEmpty() }
-            ).joinToString(", ") + ". Double tap for details."
+            ).joinToString(", ") + ". ${getString(R.string.item_double_tap)}"
 
             view.isClickable = true
             view.isFocusable = true

@@ -19,7 +19,6 @@ class MainActivity : AppCompatActivity() {
     private var tutorialManager: TutorialManager? = null
     var isTutorialNavigating = false
 
-    // Track which tab was active before camera opened
     private var preCameraTabId: Int = R.id.tab_care
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,9 +57,9 @@ class MainActivity : AppCompatActivity() {
     private fun setupSettingsButton() {
         val root = findViewById<FrameLayout>(R.id.root_layout)
         val btnSettings = Button(this).apply {
-            text = "Settings"
+            text = getString(R.string.settings)
             textSize = 14f
-            contentDescription = "Settings. Double tap to open settings."
+            contentDescription = getString(R.string.settings_content_description)
             val lp = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT,
@@ -76,14 +75,58 @@ class MainActivity : AppCompatActivity() {
 
     private fun showSettingsDialog() {
         android.app.AlertDialog.Builder(this)
-            .setTitle("Settings")
-            .setItems(arrayOf("Replay tutorial")) { _, which ->
+            .setTitle(getString(R.string.settings))
+            .setItems(arrayOf(
+                getString(R.string.settings_replay_tutorial),
+                getString(R.string.settings_select_language)
+            )) { _, which ->
                 when (which) {
                     0 -> { TutorialManager.reset(this); startTutorial() }
+                    1 -> showLanguageDialog()
                 }
             }
-            .setNegativeButton("Close", null)
+            .setNegativeButton(getString(R.string.settings_close), null)
             .show()
+    }
+
+    private fun showLanguageDialog() {
+        val languages = arrayOf("English", "Français")
+        val languageCodes = arrayOf("en", "fr")
+
+        val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+        val current = prefs.getString("language", "en")
+        val currentIndex = languageCodes.indexOf(current).takeIf { it >= 0 } ?: 0
+
+        android.app.AlertDialog.Builder(this)
+            .setTitle(getString(R.string.settings_select_language))
+            .setSingleChoiceItems(languages, currentIndex) { dialog, which ->
+                val selected = languageCodes[which]
+                prefs.edit().putString("language", selected).apply()
+                applyLanguage(selected)
+                dialog.dismiss()
+                recreate()
+            }
+            .setNegativeButton(getString(R.string.settings_close), null)
+            .show()
+    }
+
+    private fun applyLanguage(languageCode: String) {
+        val locale = java.util.Locale(languageCode)
+        java.util.Locale.setDefault(locale)
+        val config = resources.configuration
+        config.setLocale(locale)
+        resources.updateConfiguration(config, resources.displayMetrics)
+    }
+
+    override fun attachBaseContext(newBase: android.content.Context) {
+        val prefs = newBase.getSharedPreferences("settings", MODE_PRIVATE)
+        val lang = prefs.getString("language", "en") ?: "en"
+        val locale = java.util.Locale(lang)
+        java.util.Locale.setDefault(locale)
+        val config = android.content.res.Configuration(newBase.resources.configuration)
+        config.setLocale(locale)
+        val context = newBase.createConfigurationContext(config)
+        super.attachBaseContext(context)
     }
 
     private fun startTutorial() {
@@ -96,12 +139,9 @@ class MainActivity : AppCompatActivity() {
         return tm.isActive && !tm.nfcLiveThisStep
     }
 
-    // ── Camera navigation ─────────────────────────────────────────────────────
-
     fun openCamera(source: CameraFragment.Source) {
         preCameraTabId = bottomNav.selectedItemId
         CameraFragment.source = source
-        // Hide bottom nav while camera is open
         bottomNav.visibility = android.view.View.GONE
         loadFragment(CameraFragment())
     }
@@ -111,16 +151,12 @@ class MainActivity : AppCompatActivity() {
         when (source) {
             CameraFragment.Source.WRITE -> {
                 bottomNav.selectedItemId = R.id.tab_nfc
-                val nfcFragment = NfcFragment().apply {
-                    pendingVisionResults = fields
-                }
+                val nfcFragment = NfcFragment().apply { pendingVisionResults = fields }
                 loadFragment(nfcFragment)
             }
             CameraFragment.Source.CARE -> {
                 bottomNav.selectedItemId = R.id.tab_care
-                val careFragment = CareFragment().apply {
-                    pendingVisionResults = fields
-                }
+                val careFragment = CareFragment().apply { pendingVisionResults = fields }
                 loadFragment(careFragment)
             }
         }
@@ -137,8 +173,6 @@ class MainActivity : AppCompatActivity() {
         }
         loadFragment(fragment)
     }
-
-    // ── NFC ───────────────────────────────────────────────────────────────────
 
     override fun onResume() {
         super.onResume()
@@ -171,8 +205,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
-    // ── Fragment loading ──────────────────────────────────────────────────────
 
     fun loadFragment(fragment: androidx.fragment.app.Fragment) {
         supportFragmentManager.beginTransaction()

@@ -39,28 +39,27 @@ class NfcFragment : Fragment() {
     private lateinit var tvSummary: TextView
     private lateinit var btnWrite: Button
 
-    // Pre-filled results from VisionAnalyzer passed back from CameraFragment
     var pendingVisionResults: Map<String, String>? = null
 
     private var nfcAdapter: NfcAdapter? = null
     private var isWriting = false
     private var isEditingExistingTag = false
 
-    private val steps = listOf(
-        Step("N",  "What is this item called?",          "e.g. Blue Winter Jacket"),
-        Step("T",  "What type of clothing is this?",     "e.g. Jacket, Shirt, Pants"),
-        Step("CL", "What color is it?",                  "e.g. Blue, Black, Multicolor"),
-        Step("P",  "What pattern does it have?",         "e.g. Plain, Striped, Checkered"),
-        Step("S",  "What is the size?",                  "e.g. M, L, XL, 32/32, 38"),
-        Step("F",  "How formal is this item?",           "e.g. Casual, Smart Casual, Formal"),
-        Step("SE", "What season is it for?",             "e.g. Winter, Summer, All-Season"),
-        Step("M",  "What material is it made of?",       "e.g. Cotton, Wool, Polyester"),
-        Step("W",  "What is the wash temperature?",      "e.g. 30, 40, 60, Hand Wash"),
-        Step("D",  "How should it be dried?",            "e.g. Air, Tumble, Flat"),
-        Step("I",  "What are the ironing instructions?", "e.g. No Iron, Low, High"),
-        Step("B",  "Is bleaching allowed?",              "e.g. Yes, No"),
-        Step("C",  "Can it be dry cleaned?",             "e.g. Yes, No"),
-        Step("X",  "Any extra notes?",                   "e.g. Goes well with black pants")
+    private val steps get() = listOf(
+        Step("N",  getString(R.string.step_q_name),     getString(R.string.step_h_name)),
+        Step("T",  getString(R.string.step_q_type),     getString(R.string.step_h_type)),
+        Step("CL", getString(R.string.step_q_color),    getString(R.string.step_h_color)),
+        Step("P",  getString(R.string.step_q_pattern),  getString(R.string.step_h_pattern)),
+        Step("S",  getString(R.string.step_q_size),     getString(R.string.step_h_size)),
+        Step("F",  getString(R.string.step_q_formality),getString(R.string.step_h_formality)),
+        Step("SE", getString(R.string.step_q_season),   getString(R.string.step_h_season)),
+        Step("M",  getString(R.string.step_q_material), getString(R.string.step_h_material)),
+        Step("W",  getString(R.string.step_q_wash),     getString(R.string.step_h_wash)),
+        Step("D",  getString(R.string.step_q_dry),      getString(R.string.step_h_dry)),
+        Step("I",  getString(R.string.step_q_iron),     getString(R.string.step_h_iron)),
+        Step("B",  getString(R.string.step_q_bleach),   getString(R.string.step_h_bleach)),
+        Step("C",  getString(R.string.step_q_dry_clean),getString(R.string.step_h_dry_clean)),
+        Step("X",  getString(R.string.step_q_notes),    getString(R.string.step_h_notes))
     )
 
     private val answers = mutableMapOf<String, String>()
@@ -71,65 +70,98 @@ class NfcFragment : Fragment() {
     private val interpretedKeys = setOf("T", "CL", "P", "S", "F", "SE", "W", "D", "I", "B", "C")
     private val validatedKeys   = setOf("T", "CL", "P", "S", "F", "SE", "W", "D", "I", "B", "C")
 
-    private val hexToName = mapOf(
-        "212121" to "Black",  "F5F5F5" to "White",
-        "9E9E9E" to "Grey",   "1A237E" to "Navy",
-        "2196F3" to "Blue",   "F44336" to "Red",
-        "4CAF50" to "Green",  "FFEB3B" to "Yellow",
-        "FF9800" to "Orange", "E91E63" to "Pink",
-        "9C27B0" to "Purple", "795548" to "Brown",
-        "D7CCC8" to "Beige",  "FF5722" to "Multicolor",
-        "607D8B" to "Other"
+    private val hexToName get() = mapOf(
+        "212121" to getString(R.string.color_black),
+        "F5F5F5" to getString(R.string.color_white),
+        "9E9E9E" to getString(R.string.color_grey),
+        "1A237E" to getString(R.string.color_navy),
+        "2196F3" to getString(R.string.color_blue),
+        "F44336" to getString(R.string.color_red),
+        "4CAF50" to getString(R.string.color_green),
+        "FFEB3B" to getString(R.string.color_yellow),
+        "FF9800" to getString(R.string.color_orange),
+        "E91E63" to getString(R.string.color_pink),
+        "9C27B0" to getString(R.string.color_purple),
+        "795548" to getString(R.string.color_brown),
+        "D7CCC8" to getString(R.string.color_beige),
+        "FF5722" to getString(R.string.color_multicolor),
+        "607D8B" to getString(R.string.color_other)
     )
 
-    private val typeCodeToName = linkedMapOf(
-        "SH" to "Shirt", "TS" to "T-Shirt", "JK" to "Jacket", "CT" to "Coat",
-        "SW" to "Sweater", "HD" to "Hoodie", "BZ" to "Blazer", "SU" to "Suit",
-        "VS" to "Vest", "DR" to "Dress", "UW" to "Underwear", "PT" to "Pants",
-        "JN" to "Jeans", "ST" to "Shorts", "SK" to "Skirt", "SC" to "Socks"
+    private val typeCodeToName get() = linkedMapOf(
+        "SH" to getString(R.string.type_shirt),
+        "TS" to getString(R.string.type_tshirt),
+        "JK" to getString(R.string.type_jacket),
+        "CT" to getString(R.string.type_coat),
+        "SW" to getString(R.string.type_sweater),
+        "HD" to getString(R.string.type_hoodie),
+        "BZ" to getString(R.string.type_blazer),
+        "SU" to getString(R.string.type_suit),
+        "VS" to getString(R.string.type_vest),
+        "DR" to getString(R.string.type_dress),
+        "UW" to getString(R.string.type_underwear),
+        "PT" to getString(R.string.type_pants),
+        "JN" to getString(R.string.type_jeans),
+        "ST" to getString(R.string.type_shorts),
+        "SK" to getString(R.string.type_skirt),
+        "SC" to getString(R.string.type_socks)
     )
 
-    private val patternCodeToName = linkedMapOf(
-        "P"  to "Plain", "ST" to "Striped", "CH" to "Checkered", "PL" to "Plaid",
-        "FL" to "Floral", "DT" to "Polka Dot", "GR" to "Graphic",
-        "CM" to "Camouflage", "AN" to "Animal Print"
+    private val patternCodeToName get() = linkedMapOf(
+        "P"  to getString(R.string.pattern_plain),
+        "ST" to getString(R.string.pattern_striped),
+        "CH" to getString(R.string.pattern_checkered),
+        "PL" to getString(R.string.pattern_plaid),
+        "FL" to getString(R.string.pattern_floral),
+        "DT" to getString(R.string.pattern_polkadot),
+        "GR" to getString(R.string.pattern_graphic),
+        "CM" to getString(R.string.pattern_camouflage),
+        "AN" to getString(R.string.pattern_animal)
     )
 
-    private val formalitySingleToName = linkedMapOf(
-        "C" to "Casual", "B" to "Business", "F" to "Formal",
-        "S" to "Sport", "L" to "Lounge"
+    private val formalitySingleToName get() = linkedMapOf(
+        "C" to getString(R.string.formality_casual),
+        "B" to getString(R.string.formality_business),
+        "F" to getString(R.string.formality_formal),
+        "S" to getString(R.string.formality_sport),
+        "L" to getString(R.string.formality_lounge)
     )
 
-    private val formalityComboToName = mapOf(
-        "SC" to "Smart Casual", "BC" to "Business Casual", "SF" to "Smart Formal"
+    private val formalityComboToName get() = mapOf(
+        "SC" to getString(R.string.formality_smart_casual),
+        "BC" to getString(R.string.formality_business_casual),
+        "SF" to getString(R.string.formality_smart_formal)
     )
 
-    private val seasonSingleToName = linkedMapOf(
-        "W" to "Winter", "SP" to "Spring", "SU" to "Summer",
-        "A" to "Autumn", "AS" to "All-Season"
+    private val seasonSingleToName get() = linkedMapOf(
+        "W"  to getString(R.string.season_winter),
+        "SP" to getString(R.string.season_spring),
+        "SU" to getString(R.string.season_summer),
+        "A"  to getString(R.string.season_autumn),
+        "AS" to getString(R.string.season_all)
     )
 
     private val seasonCodesByLength = listOf("AS", "SP", "SU", "W", "A")
 
     private fun rejectionMessage(key: String): String = when (key) {
-        "T"  -> "Try saying the clothing type, like shirt, jacket, or pants."
-        "CL" -> "Try black, white, grey, navy, blue, red, green, yellow, orange, pink, purple, brown, beige, or multicolor."
-        "P"  -> "Try saying the pattern, like plain, striped, or checkered."
-        "S"  -> "Try a size like medium, large, 32 by 32, or 38."
-        "F"  -> "Try casual, business, formal, sport, lounge, smart casual, business casual, or smart formal."
-        "SE" -> "Try winter, spring, summer, autumn, or all-season. You can combine seasons, like spring and summer."
-        "W"  -> "Try 30, 40, 60, hand wash, or do not wash."
-        "D"  -> "Try air dry, tumble dry, flat dry, or do not dry."
-        "I"  -> "Try no iron, low, medium, or high."
-        "B"  -> "Try yes or no."
-        "C"  -> "Try yes or no."
-        else -> "Please rephrase your answer."
+        "T"  -> getString(R.string.reject_type)
+        "CL" -> getString(R.string.reject_color)
+        "P"  -> getString(R.string.reject_pattern)
+        "S"  -> getString(R.string.reject_size)
+        "F"  -> getString(R.string.reject_formality)
+        "SE" -> getString(R.string.reject_season)
+        "W"  -> getString(R.string.reject_wash)
+        "D"  -> getString(R.string.reject_dry)
+        "I"  -> getString(R.string.reject_iron)
+        "B"  -> getString(R.string.reject_yes_no)
+        "C"  -> getString(R.string.reject_yes_no)
+        else -> getString(R.string.reject_default)
     }
 
     private fun fullOptionsList(key: String): String? = when (key) {
-        "T"  -> "All clothing types:\nShirt, T-Shirt, Jacket, Coat, Sweater, Hoodie, Blazer, Suit, Vest, Dress, Underwear, Pants, Jeans, Shorts, Skirt, Socks"
-        "P"  -> "All patterns:\nPlain, Striped, Checkered, Plaid, Floral, Polka Dot, Graphic, Camouflage, Animal Print"
-        "CL" -> "All colors:\nBlack, White, Grey, Navy, Blue, Red, Green, Yellow, Orange, Pink, Purple, Brown, Beige, Multicolor"
+        "T"  -> getString(R.string.options_type)
+        "P"  -> getString(R.string.options_pattern)
+        "CL" -> getString(R.string.options_color)
         else -> null
     }
 
@@ -169,21 +201,20 @@ class NfcFragment : Fragment() {
 
         nfcAdapter = NfcAdapter.getDefaultAdapter(requireContext())
         when {
-            nfcAdapter == null       -> updateStatus("This device does not support NFC.")
-            !nfcAdapter!!.isEnabled  -> updateStatus("NFC is off. Please enable it in Settings.")
-            else                     -> updateStatus("Scan a tag to edit it, or answer each question to write a new one.")
+            nfcAdapter == null      -> updateStatus(getString(R.string.nfc_not_supported))
+            !nfcAdapter!!.isEnabled -> updateStatus(getString(R.string.nfc_disabled))
+            else                    -> updateStatus(getString(R.string.write_status_scan_or_answer))
         }
 
         showStep(0)
 
-        // Apply vision pre-fill results if returning from camera
         pendingVisionResults?.let { results ->
             results.forEach { (key, value) ->
                 if (steps.any { it.key == key }) answers[key] = value
             }
             pendingVisionResults = null
-            updateStatus("Fields pre-filled from camera. Review and adjust if needed.")
-            tvStatus.announceForAccessibility("Fields pre-filled from camera. Review each step and adjust if needed.")
+            updateStatus(getString(R.string.write_status_prefilled))
+            tvStatus.announceForAccessibility(getString(R.string.write_status_prefilled))
             showStep(0)
         }
 
@@ -192,7 +223,7 @@ class NfcFragment : Fragment() {
             val key   = steps[currentStep].key
 
             if (key == "N" && input.isEmpty()) {
-                showStepError("Please enter a name for this item.", key)
+                showStepError(getString(R.string.write_error_name_required), key)
                 return@setOnClickListener
             }
 
@@ -205,9 +236,8 @@ class NfcFragment : Fragment() {
 
             val processed = if (key in interpretedKeys) interpret(key, input) else input
 
-            // Size is free-form: skip equality check so direct codes like "XL" are accepted.
             if (key in validatedKeys && key != "S" && processed.equals(input, ignoreCase = true)) {
-                showStepError("Sorry, I didn't catch that. ${rejectionMessage(key)}", key)
+                showStepError("${getString(R.string.write_error_not_recognized)} ${rejectionMessage(key)}", key)
                 return@setOnClickListener
             }
 
@@ -248,32 +278,30 @@ class NfcFragment : Fragment() {
 
         btnWrite.setOnClickListener {
             if (answers["N"].isNullOrEmpty()) {
-                updateStatus("Please go back and enter an item name.")
-                tvStatus.announceForAccessibility("Please go back and enter an item name.")
+                updateStatus(getString(R.string.write_status_needs_name))
+                tvStatus.announceForAccessibility(getString(R.string.write_status_needs_name))
                 return@setOnClickListener
             }
             if (isEditingExistingTag) {
                 AlertDialog.Builder(requireContext())
-                    .setTitle("Overwrite Tag?")
-                    .setMessage("This will replace all existing data on the tag. Continue?")
-                    .setPositiveButton("Overwrite") { _, _ ->
+                    .setTitle(getString(R.string.dialog_overwrite_title))
+                    .setMessage(getString(R.string.dialog_overwrite_message))
+                    .setPositiveButton(getString(R.string.dialog_overwrite_confirm)) { _, _ ->
                         isWriting = true
-                        updateStatus("Hold your phone to the tag to overwrite it.")
-                        tvStatus.announceForAccessibility("Hold your phone to the tag to overwrite it.")
+                        updateStatus(getString(R.string.write_status_hold_overwrite))
+                        tvStatus.announceForAccessibility(getString(R.string.write_status_hold_overwrite))
                     }
-                    .setNegativeButton("Cancel", null)
+                    .setNegativeButton(getString(R.string.dialog_cancel), null)
                     .show()
             } else {
                 isWriting = true
-                updateStatus("Hold your phone to an NFC tag to write to it.")
-                tvStatus.announceForAccessibility("Hold your phone to an NFC tag to write to it.")
+                updateStatus(getString(R.string.write_status_hold_tag))
+                tvStatus.announceForAccessibility(getString(R.string.write_status_hold_tag))
             }
         }
 
         return view
     }
-
-    // ── Navigation ────────────────────────────────────────────────────────────
 
     private fun advance() {
         if (currentStep < steps.size - 1) {
@@ -284,8 +312,6 @@ class NfcFragment : Fragment() {
         }
     }
 
-    // ── Error handling ────────────────────────────────────────────────────────
-
     private fun showStepError(message: String, key: String = "") {
         tvStepError.text = message
         tvStepError.visibility = View.VISIBLE
@@ -294,8 +320,8 @@ class NfcFragment : Fragment() {
         val fullOptions = if (key.isNotEmpty()) fullOptionsList(key) else null
         if (fullOptions != null) {
             btnShowOptions.visibility = View.VISIBLE
-            btnShowOptions.text = "Show all options"
-            btnShowOptions.contentDescription = "Show all options. Double tap to expand full list."
+            btnShowOptions.text = getString(R.string.btn_show_options)
+            btnShowOptions.contentDescription = getString(R.string.btn_show_options_description)
             var expanded = false
             btnShowOptions.setOnClickListener {
                 expanded = !expanded
@@ -304,9 +330,9 @@ class NfcFragment : Fragment() {
                     btnShowOptions.contentDescription = "$fullOptions. Double tap to collapse."
                     btnShowOptions.announceForAccessibility(fullOptions)
                 } else {
-                    btnShowOptions.text = "Show all options"
-                    btnShowOptions.contentDescription = "Show all options. Double tap to expand full list."
-                    btnShowOptions.announceForAccessibility("Options list collapsed.")
+                    btnShowOptions.text = getString(R.string.btn_show_options)
+                    btnShowOptions.contentDescription = getString(R.string.btn_show_options_description)
+                    btnShowOptions.announceForAccessibility(getString(R.string.options_collapsed))
                 }
             }
         } else {
@@ -320,10 +346,8 @@ class NfcFragment : Fragment() {
         tvStepError.text = ""
         tvStepError.visibility = View.GONE
         btnShowOptions.visibility = View.GONE
-        btnShowOptions.text = "Show all options"
+        btnShowOptions.text = getString(R.string.btn_show_options)
     }
-
-    // ── NFC ───────────────────────────────────────────────────────────────────
 
     fun onTagDiscovered(tag: Tag) {
         when {
@@ -338,8 +362,8 @@ class NfcFragment : Fragment() {
 
             if (ndef == null) {
                 requireActivity().runOnUiThread {
-                    updateStatus("Tag is empty. Answer each question to write a new one.")
-                    tvStatus.announceForAccessibility("Tag is empty. Answer each question to write a new one.")
+                    updateStatus(getString(R.string.write_tag_empty_answer))
+                    tvStatus.announceForAccessibility(getString(R.string.write_tag_empty_answer))
                 }
                 return
             }
@@ -350,8 +374,8 @@ class NfcFragment : Fragment() {
 
             if (message == null) {
                 requireActivity().runOnUiThread {
-                    updateStatus("Tag is empty. Answer each question to write a new one.")
-                    tvStatus.announceForAccessibility("Tag is empty. Answer each question to write a new one.")
+                    updateStatus(getString(R.string.write_tag_empty_answer))
+                    tvStatus.announceForAccessibility(getString(R.string.write_tag_empty_answer))
                 }
                 return
             }
@@ -363,23 +387,22 @@ class NfcFragment : Fragment() {
 
             if (!raw.contains("N:")) {
                 requireActivity().runOnUiThread {
-                    updateStatus("This tag was not written by LexaWEAR.")
-                    tvStatus.announceForAccessibility("This tag was not written by LexaWEAR.")
+                    updateStatus(getString(R.string.tag_not_lexawear))
+                    tvStatus.announceForAccessibility(getString(R.string.tag_not_lexawear))
                 }
                 return
             }
 
             requireActivity().runOnUiThread {
-                val hasProgress = answers.isNotEmpty()
-                val dialogMessage = if (hasProgress)
-                    "Load this tag for editing? This will discard your current progress."
+                val dialogMessage = if (answers.isNotEmpty())
+                    getString(R.string.dialog_tag_found_load_discard)
                 else
-                    "Load this tag for editing?"
+                    getString(R.string.dialog_tag_found_load)
 
                 AlertDialog.Builder(requireContext())
-                    .setTitle("Tag Found")
+                    .setTitle(getString(R.string.dialog_tag_found_title))
                     .setMessage(dialogMessage)
-                    .setPositiveButton("Load") { _, _ ->
+                    .setPositiveButton(getString(R.string.dialog_load)) { _, _ ->
                         answers.clear()
                         raw.split("|").forEach { part ->
                             val key   = part.substringBefore(":")
@@ -391,41 +414,33 @@ class NfcFragment : Fragment() {
                         isEditingExistingTag = true
                         currentStep = 0
                         showStep(0)
-                        updateStatus("Tag loaded. Edit any field, then tap Write to Tag.")
-                        tvStatus.announceForAccessibility("Tag loaded for editing.")
+                        updateStatus(getString(R.string.write_tag_loaded))
+                        tvStatus.announceForAccessibility(getString(R.string.write_tag_loaded_accessibility))
                     }
-                    .setNegativeButton("Cancel", null)
+                    .setNegativeButton(getString(R.string.dialog_cancel), null)
                     .show()
             }
 
         } catch (e: Exception) {
             requireActivity().runOnUiThread {
-                updateStatus("Error reading tag: ${e.message}")
+                updateStatus(getString(R.string.tag_error_reading, e.message))
             }
         }
     }
 
-    // ── Interpreter ───────────────────────────────────────────────────────────
+    // ── Interpreter (logic unchanged, no string changes needed) ──────────────
 
     private fun interpret(key: String, input: String): String {
         val s = input.lowercase()
-            .replace("degrees", "")
-            .replace("degree",  "")
-            .replace("don't",     "do not")
-            .replace("dont",      "do not")
-            .replace("can't",     "cannot")
-            .replace("cant",      "cannot")
-            .replace("cannot",    "can not")
-            .replace("won't",     "will not")
-            .replace("wont",      "will not")
-            .replace("shouldn't", "should not")
-            .replace("shouldnt",  "should not")
-            .replace("doesn't",   "does not")
-            .replace("doesnt",    "does not")
-            .replace("isn't",     "is not")
-            .replace("isnt",      "is not")
-            .replace("never",     "not")
-            .trim()
+            .replace("degrees", "").replace("degree",  "")
+            .replace("don't", "do not").replace("dont", "do not")
+            .replace("can't", "cannot").replace("cant", "cannot")
+            .replace("cannot", "can not")
+            .replace("won't", "will not").replace("wont", "will not")
+            .replace("shouldn't", "should not").replace("shouldnt", "should not")
+            .replace("doesn't", "does not").replace("doesnt", "does not")
+            .replace("isn't", "is not").replace("isnt", "is not")
+            .replace("never", "not").trim()
 
         fun hasWord(word: String): Boolean =
             Regex("\\b${Regex.escape(word)}\\b").containsMatchIn(s)
@@ -494,35 +509,35 @@ class NfcFragment : Fragment() {
     }
 
     private fun interpretType(rawInput: String, s: String): String = when {
-        "t-shirt" in s || "tshirt" in s || "tee" in s     -> "TS"
-        "shirt"     in s                                   -> "SH"
-        "jacket"    in s                                   -> "JK"
-        "coat"      in s                                   -> "CT"
+        "t-shirt" in s || "tshirt" in s || "tee" in s       -> "TS"
+        "shirt"     in s                                     -> "SH"
+        "jacket"    in s                                     -> "JK"
+        "coat"      in s                                     -> "CT"
         "sweater"   in s || "jumper" in s || "pullover" in s -> "SW"
-        "hoodie"    in s                                   -> "HD"
-        "blazer"    in s                                   -> "BZ"
-        "suit"      in s                                   -> "SU"
-        "vest"      in s                                   -> "VS"
-        "dress"     in s                                   -> "DR"
-        "underwear" in s                                   -> "UW"
-        "trouser"   in s || "pants" in s                   -> "PT"
-        "jeans"     in s                                   -> "JN"
-        "shorts"    in s                                   -> "ST"
-        "skirt"     in s                                   -> "SK"
-        "sock"      in s                                   -> "SC"
+        "hoodie"    in s                                     -> "HD"
+        "blazer"    in s                                     -> "BZ"
+        "suit"      in s                                     -> "SU"
+        "vest"      in s                                     -> "VS"
+        "dress"     in s                                     -> "DR"
+        "underwear" in s                                     -> "UW"
+        "trouser"   in s || "pants" in s                     -> "PT"
+        "jeans"     in s                                     -> "JN"
+        "shorts"    in s                                     -> "ST"
+        "skirt"     in s                                     -> "SK"
+        "sock"      in s                                     -> "SC"
         else -> rawInput
     }
 
     private fun interpretPattern(rawInput: String, s: String): String = when {
-        "plain"   in s || "solid"   in s                           -> "P"
-        "stripe"  in s                                             -> "ST"
-        "check"   in s                                             -> "CH"
-        "plaid"   in s || "tartan"  in s                           -> "PL"
-        "floral"  in s || "flower"  in s                           -> "FL"
-        "polka"   in s || "dot"     in s                           -> "DT"
-        "graphic" in s || "print"   in s                           -> "GR"
-        "camo"    in s                                             -> "CM"
-        "animal"  in s || "leopard" in s || "zebra" in s           -> "AN"
+        "plain"   in s || "solid"   in s             -> "P"
+        "stripe"  in s                               -> "ST"
+        "check"   in s                               -> "CH"
+        "plaid"   in s || "tartan"  in s             -> "PL"
+        "floral"  in s || "flower"  in s             -> "FL"
+        "polka"   in s || "dot"     in s             -> "DT"
+        "graphic" in s || "print"   in s             -> "GR"
+        "camo"    in s                               -> "CM"
+        "animal"  in s || "leopard" in s || "zebra" in s -> "AN"
         else -> rawInput
     }
 
@@ -533,7 +548,6 @@ class NfcFragment : Fragment() {
         val hasFormal   = "formal"   in s
         val hasSport    = "sport"    in s || "athletic" in s || "gym" in s
         val hasLounge   = "lounge"   in s || "sleep" in s || "pyjama" in s || "pajama" in s
-
         return when {
             hasSmart && hasCasual    -> "SC"
             hasBusiness && hasCasual -> "BC"
@@ -553,11 +567,11 @@ class NfcFragment : Fragment() {
         val pattern = Regex("\\b(spring|summer|autumn|fall|winter)\\b")
         for (m in pattern.findAll(s)) {
             val code = when (m.value) {
-                "spring"        -> "SP"
-                "summer"        -> "SU"
-                "autumn", "fall"-> "A"
-                "winter"        -> "W"
-                else            -> continue
+                "spring"         -> "SP"
+                "summer"         -> "SU"
+                "autumn", "fall" -> "A"
+                "winter"         -> "W"
+                else             -> continue
             }
             if (code !in mentions) mentions.add(code)
         }
@@ -566,17 +580,12 @@ class NfcFragment : Fragment() {
 
     private fun interpretSize(rawInput: String, normalized: String): String {
         val s = normalized.replace("-", " ").replace(",", " ")
-
         val oneSizePatterns = listOf("one size", "free size", "onesize", "freesize")
         if (oneSizePatterns.any { it in s }) return "OS"
         if (Regex("\\bos\\b").containsMatchIn(s)) return "OS"
-
         val withDigits = wordsToDigits(s)
-
         Regex("(\\d{2,3})\\s*(?:/|x|by)\\s*(\\d{2,3})")
-            .find(withDigits)
-            ?.let { return "${it.groupValues[1]}/${it.groupValues[2]}" }
-
+            .find(withDigits)?.let { return "${it.groupValues[1]}/${it.groupValues[2]}" }
         val letterPatterns = listOf(
             Regex("\\bxxxl\\b|triple\\s*(?:extra\\s*)?large|3xl") to "XXXL",
             Regex("\\bxxl\\b|double\\s*(?:extra\\s*)?large|2xl")  to "XXL",
@@ -589,11 +598,7 @@ class NfcFragment : Fragment() {
         for ((pattern, code) in letterPatterns) {
             if (pattern.containsMatchIn(withDigits)) return code
         }
-
-        Regex("\\b(\\d{2,3})\\b")
-            .find(withDigits)
-            ?.let { return it.groupValues[1] }
-
+        Regex("\\b(\\d{2,3})\\b").find(withDigits)?.let { return it.groupValues[1] }
         return rawInput
     }
 
@@ -609,7 +614,6 @@ class NfcFragment : Fragment() {
             "twenty" to 20, "thirty" to 30, "forty" to 40, "fifty" to 50,
             "sixty" to 60, "seventy" to 70, "eighty" to 80, "ninety" to 90
         )
-
         val tokens = input.split(Regex("\\s+")).toMutableList()
         val out = mutableListOf<String>()
         var i = 0
@@ -620,35 +624,25 @@ class NfcFragment : Fragment() {
                 val next    = tokens.getOrNull(i + 1)
                 val onesVal = ones[next]
                 if (onesVal != null && onesVal in 1..9) {
-                    out.add((tenVal + onesVal).toString())
-                    i += 2
-                    continue
+                    out.add((tenVal + onesVal).toString()); i += 2; continue
                 }
-                out.add(tenVal.toString())
-                i++
-                continue
+                out.add(tenVal.toString()); i++; continue
             }
             val onesValStandalone = ones[t]
             if (onesValStandalone != null) {
-                out.add(onesValStandalone.toString())
-                i++
-                continue
+                out.add(onesValStandalone.toString()); i++; continue
             }
-            out.add(t)
-            i++
+            out.add(t); i++
         }
         return out.joinToString(" ")
     }
-
-    // ── Decoder ───────────────────────────────────────────────────────────────
 
     private fun decode(key: String, value: String): String = when (key) {
         "T"  -> typeCodeToName[value.uppercase()] ?: value
         "CL" -> hexToName[value.uppercase()] ?: value
         "P"  -> patternCodeToName[value.uppercase()] ?: value
         "F"  -> formalityComboToName[value.uppercase()]
-            ?: formalitySingleToName[value.uppercase()]
-            ?: value
+            ?: formalitySingleToName[value.uppercase()] ?: value
         "SE" -> {
             val v = value.uppercase()
             seasonSingleToName[v] ?: run {
@@ -664,29 +658,30 @@ class NfcFragment : Fragment() {
                 parts.joinToString("/")
             }
         }
-        "S"  -> if (value == "OS") "One Size" else value
+        "S"  -> if (value == "OS") getString(R.string.one_size) else value
         "W"  -> when (value) {
-            "30" -> "Wash at 30°"; "40" -> "Wash at 40°"; "60" -> "Wash at 60°"
-            "H"  -> "Hand wash";   "N"  -> "Do not wash"; else -> value
+            "30" -> getString(R.string.wash_30); "40" -> getString(R.string.wash_40)
+            "60" -> getString(R.string.wash_60); "H"  -> getString(R.string.wash_hand)
+            "N"  -> getString(R.string.wash_no); else -> value
         }
         "D"  -> when (value) {
-            "A" -> "Air dry"; "T" -> "Tumble dry"; "F" -> "Flat dry"
-            "N" -> "Do not dry"; else -> value
+            "A" -> getString(R.string.dry_air);   "T" -> getString(R.string.dry_tumble)
+            "F" -> getString(R.string.dry_flat);  "N" -> getString(R.string.dry_no)
+            else -> value
         }
         "I"  -> when (value) {
-            "0" -> "No iron"; "1" -> "Low heat"; "2" -> "Medium heat"
-            "3" -> "High heat"; else -> value
+            "0" -> getString(R.string.iron_no);   "1" -> getString(R.string.iron_low)
+            "2" -> getString(R.string.iron_medium); "3" -> getString(R.string.iron_high)
+            else -> value
         }
-        "B"  -> when (value) { "1" -> "Yes"; "0" -> "No"; else -> value }
-        "C"  -> when (value) { "1" -> "Yes"; "0" -> "No"; else -> value }
+        "B"  -> when (value) { "1" -> getString(R.string.yes); "0" -> getString(R.string.no); else -> value }
+        "C"  -> when (value) { "1" -> getString(R.string.yes); "0" -> getString(R.string.no); else -> value }
         else -> value
     }
 
-    // ── Step UI ───────────────────────────────────────────────────────────────
-
     private fun showStep(index: Int) {
         val step = steps[index]
-        tvStepIndicator.text = "Step ${index + 1} of ${steps.size}"
+        tvStepIndicator.text = getString(R.string.step_indicator, index + 1, steps.size)
         tvQuestion.text      = step.question
         etStepInput.hint     = step.hint
 
@@ -701,7 +696,8 @@ class NfcFragment : Fragment() {
 
         layoutSummary.visibility = View.GONE
         btnWrite.visibility      = View.GONE
-        btnNext.text = if (index == steps.size - 1) "Review" else "Next"
+        btnNext.text = if (index == steps.size - 1) getString(R.string.btn_review)
+        else getString(R.string.btn_next)
 
         btnBack.isEnabled = index > 0
         btnBack.alpha     = if (index > 0) 1f else 0.4f
@@ -712,37 +708,35 @@ class NfcFragment : Fragment() {
         btnSkip.visibility = if (canSkip) View.VISIBLE else View.INVISIBLE
 
         tvQuestion.announceForAccessibility(
-            "Step ${index + 1} of ${steps.size}. ${step.question}"
+            getString(R.string.step_indicator, index + 1, steps.size) + ". ${step.question}"
         )
-        updateStatus("Answer each question to tag this item.")
+        updateStatus(getString(R.string.write_status_answer))
     }
 
     private fun showSummary() {
         layoutSummary.visibility = View.VISIBLE
         btnWrite.visibility      = View.VISIBLE
-        btnNext.text             = "Next"
+        btnNext.text             = getString(R.string.btn_next)
 
         val labelMap = mapOf(
-            "N" to "Name", "T" to "Type", "CL" to "Color",
-            "P" to "Pattern", "S" to "Size", "F" to "Formality",
-            "SE" to "Season", "M" to "Material", "W" to "Wash",
-            "D" to "Drying", "I" to "Ironing", "B" to "Bleaching",
-            "C" to "Dry Clean", "X" to "Notes"
+            "N" to getString(R.string.field_item),      "T"  to getString(R.string.field_type),
+            "CL" to getString(R.string.field_color),    "P"  to getString(R.string.field_pattern),
+            "S"  to getString(R.string.field_size),     "F"  to getString(R.string.field_formality),
+            "SE" to getString(R.string.field_season),   "M"  to getString(R.string.field_material),
+            "W"  to getString(R.string.field_wash),     "D"  to getString(R.string.field_drying),
+            "I"  to getString(R.string.field_ironing),  "B"  to getString(R.string.field_bleaching),
+            "C"  to getString(R.string.field_dry_clean),"X"  to getString(R.string.field_notes)
         )
 
         val summary = steps
             .filter { answers[it.key]?.isNotEmpty() == true }
-            .joinToString("\n") {
-                "${labelMap[it.key]}: ${decode(it.key, answers[it.key]!!)}"
-            }
+            .joinToString("\n") { "${labelMap[it.key]}: ${decode(it.key, answers[it.key]!!)}" }
 
         tvSummary.text = summary
-        tvSummary.contentDescription = "Summary. $summary. Tap Write to Tag to continue."
-        tvSummary.announceForAccessibility("Summary. $summary. Tap Write to Tag to save.")
-        updateStatus("Review your answers, then tap Write to Tag.")
+        tvSummary.contentDescription = "${getString(R.string.summary_description)}. $summary."
+        tvSummary.announceForAccessibility("$summary.")
+        updateStatus(getString(R.string.write_status_review))
     }
-
-    // ── Tag writing ───────────────────────────────────────────────────────────
 
     private fun writeTag(tag: Tag) {
         try {
@@ -765,16 +759,16 @@ class NfcFragment : Fragment() {
                 }
                 else -> {
                     requireActivity().runOnUiThread {
-                        updateStatus("This tag cannot be written to.")
-                        tvStatus.announceForAccessibility("This tag cannot be written to.")
+                        updateStatus(getString(R.string.tag_cannot_write))
+                        tvStatus.announceForAccessibility(getString(R.string.tag_cannot_write))
                     }
                     return
                 }
             }
 
             requireActivity().runOnUiThread {
-                updateStatus("Tag written successfully!")
-                tvStatus.announceForAccessibility("Tag written successfully!")
+                updateStatus(getString(R.string.tag_written_success))
+                tvStatus.announceForAccessibility(getString(R.string.tag_written_success))
                 isWriting = false
                 isEditingExistingTag = false
                 answers.clear()
@@ -784,7 +778,7 @@ class NfcFragment : Fragment() {
 
         } catch (e: Exception) {
             requireActivity().runOnUiThread {
-                updateStatus("Error writing tag: ${e.message}")
+                updateStatus(getString(R.string.tag_error_writing, e.message))
                 isWriting = false
                 isEditingExistingTag = false
             }
