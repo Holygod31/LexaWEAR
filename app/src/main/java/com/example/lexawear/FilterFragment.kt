@@ -80,11 +80,55 @@ class FilterFragment : Fragment() {
     private var seasonIndex    = 0
     private var formalityIndex = 0
 
-    fun restoreFilters(typeCode: String, colorHex: String, seasonCode: String, formalityCode: String) {
-        typeIndex      = typeOptions.indexOfFirst { it.code.equals(typeCode, ignoreCase = true) }.takeIf { it >= 0 } ?: 0
-        colorIndex     = colorOptions.indexOfFirst { it.code.equals(colorHex, ignoreCase = true) }.takeIf { it >= 0 } ?: 0
-        seasonIndex    = seasonOptions.indexOfFirst { it.code.equals(seasonCode, ignoreCase = true) }.takeIf { it >= 0 } ?: 0
-        formalityIndex = formalityOptions.indexOfFirst { it.code.equals(formalityCode, ignoreCase = true) }.takeIf { it >= 0 } ?: 0
+    // Pending codes stored by restoreFilters() if called before onCreateView.
+    // Resolved to indices in onCreateView once getString() is safe to call.
+    private var pendingTypeCode      = ""
+    private var pendingColorCode     = ""
+    private var pendingSeasonCode    = ""
+    private var pendingFormalityCode = ""
+    private var hasPendingRestore    = false
+
+    /**
+     * Called by MainActivity to restore active filter state when the tab is
+     * opened. May be called before or after onCreateView, so we store the raw
+     * codes and resolve them to indices lazily in onCreateView.
+     */
+    fun restoreFilters(
+        typeCode: String,
+        colorHex: String,
+        seasonCode: String,
+        formalityCode: String
+    ) {
+        pendingTypeCode      = typeCode
+        pendingColorCode     = colorHex
+        pendingSeasonCode    = seasonCode
+        pendingFormalityCode = formalityCode
+        hasPendingRestore    = true
+
+        // If the fragment is already attached (tab revisited), apply immediately.
+        if (isAdded) applyPendingRestore()
+    }
+
+    /** Resolves stored codes to list indices. Only safe to call after attach. */
+    private fun applyPendingRestore() {
+        typeIndex      = typeOptions.indexOfFirst {
+            it.code.equals(pendingTypeCode, ignoreCase = true)
+        }.takeIf { it >= 0 } ?: 0
+
+        colorIndex     = colorOptions.indexOfFirst {
+            it.code.equals(pendingColorCode, ignoreCase = true)
+        }.takeIf { it >= 0 } ?: 0
+
+        seasonIndex    = seasonOptions.indexOfFirst {
+            it.code.equals(pendingSeasonCode, ignoreCase = true)
+        }.takeIf { it >= 0 } ?: 0
+
+        formalityIndex = formalityOptions.indexOfFirst {
+            it.code.equals(pendingFormalityCode, ignoreCase = true)
+        }.takeIf { it >= 0 } ?: 0
+
+        hasPendingRestore = false
+        updateAllDisplays()
     }
 
     override fun onCreateView(
@@ -96,6 +140,9 @@ class FilterFragment : Fragment() {
         tvColorValue     = view.findViewById(R.id.tv_color_value)
         tvSeasonValue    = view.findViewById(R.id.tv_season_value)
         tvFormalityValue = view.findViewById(R.id.tv_formality_value)
+
+        // Resolve any codes that arrived before the fragment was attached.
+        if (hasPendingRestore) applyPendingRestore()
 
         updateAllDisplays()
 
