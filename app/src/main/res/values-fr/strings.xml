@@ -347,6 +347,9 @@
     <string name="camera_btn_retake">Reprendre</string>
     <string name="camera_btn_retake_description">Reprendre la photo</string>
     <string name="camera_ready">Prêt. Appuyez sur Capturer quand vous êtes prêt.</string>
+    <string name="camera_type_detected">%1$s détecté avec %2$d pourcent de confiance.</string>
+    <string name="camera_color_detected">Couleur détectée : %s.</string>
+    <string name="camera_type_low_confidence">Type de vêtement incertain — veuillez le sélectionner manuellement.</string>
 
     <!-- Vision analyzer -->
     <string name="vision_analyzing">Analyse en cours…</string>

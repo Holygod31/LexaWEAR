@@ -347,6 +347,9 @@
     <string name="camera_btn_retake">Retake</string>
     <string name="camera_btn_retake_description">Retake the photo</string>
     <string name="camera_ready">Ready. Tap Capture when ready.</string>
+    <string name="camera_type_detected">%1$s detected at %2$d percent confidence.</string>
+    <string name="camera_color_detected">Color detected: %s.</string>
+    <string name="camera_type_low_confidence">Item type unclear — please select it manually.</string>
 
     <!-- Vision analyzer -->
     <string name="vision_analyzing">Analyzing…</string>

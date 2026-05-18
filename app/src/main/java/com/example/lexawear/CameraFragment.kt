@@ -3,6 +3,8 @@ package com.example.lexawear
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Bundle
 import android.util.Size
 import android.view.LayoutInflater
@@ -22,11 +24,15 @@ import java.util.concurrent.Executors
 /**
  * CameraFragment — two-shot clothing + care label camera flow.
  *
- * Shot 1 (default): point at clothing item → detects type, color, pattern
- * Shot 2 (care label): point at care label → reads wash/dry/iron/bleach/dryclean
+ * Shot 1 (default): point at clothing item → detects type (if confident), color, pattern.
+ * Shot 2 (care label): point at care label → reads wash/dry/iron/bleach/dryclean.
  *
- * Results are passed back to MainActivity which routes them to the
- * originating fragment (NfcFragment or CareFragment).
+ * Partial results are announced field-by-field via TalkBack so blind users
+ * understand exactly what was and wasn't detected. If type confidence is too
+ * low, a specific prompt asks the user to fill it in manually.
+ *
+ * An audio shutter cue (brief beep) plays on capture so blind users get
+ * confirmation without needing to watch the screen.
  */
 class CameraFragment : Fragment() {
 
@@ -76,7 +82,8 @@ class CameraFragment : Fragment() {
         btnCancel   = view.findViewById(R.id.btn_camera_cancel)
 
         careSymbolClassifier = CareSymbolClassifier(requireContext())
-        visionAnalyzer = VisionAnalyzer(careSymbolClassifier)
+        // Pass context so VisionAnalyzer can resolve string resources.
+        visionAnalyzer = VisionAnalyzer(careSymbolClassifier, requireContext())
 
         if (source == Source.CARE) {
             isCareLabelMode = true
@@ -84,15 +91,8 @@ class CameraFragment : Fragment() {
         }
 
         btnCapture.setOnClickListener { captureAndAnalyze() }
-
-        btnCare.setOnClickListener {
-            isCareLabelMode = !isCareLabelMode
-            updateModeUI()
-        }
-
-        btnCancel.setOnClickListener {
-            (activity as? MainActivity)?.onCameraCancel()
-        }
+        btnCare.setOnClickListener { isCareLabelMode = !isCareLabelMode; updateModeUI() }
+        btnCancel.setOnClickListener { (activity as? MainActivity)?.onCameraCancel() }
 
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)
             == PackageManager.PERMISSION_GRANTED) {
@@ -103,6 +103,8 @@ class CameraFragment : Fragment() {
 
         return view
     }
+
+    // ── Mode UI ───────────────────────────────────────────────────────────────
 
     private fun updateModeUI() {
         if (isCareLabelMode) {
@@ -122,14 +124,15 @@ class CameraFragment : Fragment() {
         }
     }
 
+    // ── Camera setup ──────────────────────────────────────────────────────────
+
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
 
         cameraProviderFuture.addListener({
             val cameraProvider = cameraProviderFuture.get()
 
-            val preview = Preview.Builder()
-                .build()
+            val preview = Preview.Builder().build()
                 .also { it.setSurfaceProvider(previewView.surfaceProvider) }
 
             imageCapture = ImageCapture.Builder()
@@ -169,10 +172,15 @@ class CameraFragment : Fragment() {
         }, ContextCompat.getMainExecutor(requireContext()))
     }
 
+    // ── Capture flow ──────────────────────────────────────────────────────────
+
     private fun captureAndAnalyze() {
         val capture = imageCapture ?: return
         liveAnalysisActive = false
         btnCapture.isEnabled = false
+
+        // Brief audio cue — confirms capture for blind users without screen feedback.
+        playShutterCue()
         updateStatus(getString(R.string.camera_capturing))
 
         capture.takePicture(
@@ -183,7 +191,6 @@ class CameraFragment : Fragment() {
                     image.close()
                     processCapture(bitmap)
                 }
-
                 override fun onError(exception: ImageCaptureException) {
                     requireActivity().runOnUiThread {
                         updateStatus(getString(R.string.camera_capture_failed, exception.message))
@@ -193,6 +200,17 @@ class CameraFragment : Fragment() {
                 }
             }
         )
+    }
+
+    /**
+     * Plays a brief 880 Hz beep as a shutter confirmation sound.
+     * Fails silently — non-critical, device may be muted.
+     */
+    private fun playShutterCue() {
+        try {
+            val toneGen = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 60)
+            toneGen.startTone(ToneGenerator.TONE_PROP_BEEP, 80)
+        } catch (e: Exception) { /* non-critical */ }
     }
 
     private fun processCapture(bitmap: Bitmap) {
@@ -208,100 +226,121 @@ class CameraFragment : Fragment() {
         }
     }
 
+    // ── Result handling ───────────────────────────────────────────────────────
+
+    /**
+     * Handles a vision result with field-by-field TalkBack announcements.
+     *
+     * Partial results are valid — e.g. colour detected but type not confident.
+     * Each detected field is announced separately so the user knows exactly
+     * what was found and what still needs manual input.
+     */
     private fun handleResult(result: VisionAnalyzer.AnalysisResult) {
         accumulatedFields.putAll(result.fields)
 
-        if (result.fields.isEmpty()) {
+        if (result.fields.isEmpty() && !result.typeLowConfidence) {
             updateStatus(getString(R.string.camera_nothing_recognized))
-            tvOverlay.announceForAccessibility(getString(R.string.camera_nothing_recognized_accessibility))
+            tvOverlay.announceForAccessibility(
+                getString(R.string.camera_nothing_recognized_accessibility)
+            )
             btnCapture.isEnabled = true
             liveAnalysisActive = true
             return
         }
 
-        val confidencePct = (result.confidence * 100).toInt()
-        val fieldSummary  = buildFieldSummary(result.fields)
-        val modeLabel     = if (result.fromCareLabel)
-            getString(R.string.camera_mode_label_care)
-        else
-            getString(R.string.camera_mode_label_clothing)
+        val announcements = mutableListOf<String>()
+        val summaryParts  = mutableListOf<String>()
 
-        updateStatus(getString(R.string.camera_detected_status, modeLabel, confidencePct, fieldSummary))
-        tvOverlay.text = fieldSummary
-        tvOverlay.announceForAccessibility(
-            getString(R.string.camera_detected_accessibility, modeLabel, fieldSummary)
-        )
+        // ── Type ──────────────────────────────────────────────────────────────
+        val typeCode = result.fields["T"]
+        if (typeCode != null) {
+            val typeName = getString(when (typeCode) {
+                "SH" -> R.string.type_shirt;    "TS" -> R.string.type_tshirt
+                "JK" -> R.string.type_jacket;   "CT" -> R.string.type_coat
+                "SW" -> R.string.type_sweater;  "HD" -> R.string.type_hoodie
+                "BZ" -> R.string.type_blazer;   "SU" -> R.string.type_suit
+                "VS" -> R.string.type_vest;     "DR" -> R.string.type_dress
+                "UW" -> R.string.type_underwear;"PT" -> R.string.type_pants
+                "JN" -> R.string.type_jeans;    "ST" -> R.string.type_shorts
+                "SK" -> R.string.type_skirt;    "SC" -> R.string.type_socks
+                else -> R.string.field_type
+            })
+            val confidencePct = (result.confidence * 100).toInt()
+            announcements.add(getString(R.string.camera_type_detected, typeName, confidencePct))
+            summaryParts.add("${getString(R.string.field_type)}: $typeName ($confidencePct%)")
+        } else if (result.typeLowConfidence) {
+            announcements.add(getString(R.string.camera_type_low_confidence))
+            summaryParts.add(getString(R.string.camera_type_low_confidence))
+        }
+
+        // ── Colour ────────────────────────────────────────────────────────────
+        val colorHex = result.fields["CL"]
+        if (colorHex != null) {
+            val colorName = ColorPalette.nameForHex(colorHex, ::getString)
+                ?: getString(ColorPalette.nearestEntryFromArgb(
+                    try { android.graphics.Color.parseColor("#$colorHex") } catch (e: Exception) { 0 }
+                ).nameRes)
+            announcements.add(getString(R.string.camera_color_detected, colorName))
+            summaryParts.add("${getString(R.string.field_color)}: $colorName")
+        }
+
+        // ── Pattern ───────────────────────────────────────────────────────────
+        val patternCode = result.fields["P"]
+        if (patternCode != null) {
+            val patternName = getString(when (patternCode) {
+                "P"  -> R.string.pattern_plain;       "ST" -> R.string.pattern_striped
+                "CH" -> R.string.pattern_checkered;   "PL" -> R.string.pattern_plaid
+                "FL" -> R.string.pattern_floral;      "DT" -> R.string.pattern_polkadot
+                "GR" -> R.string.pattern_graphic;     "CM" -> R.string.pattern_camouflage
+                "AN" -> R.string.pattern_animal;      else -> R.string.field_pattern
+            })
+            summaryParts.add("${getString(R.string.field_pattern)}: $patternName")
+        }
+
+        // ── Care label fields ─────────────────────────────────────────────────
+        if (result.fromCareLabel) {
+            result.fields.filterKeys { it in setOf("W", "D", "I", "B", "C") }
+                .forEach { (key, code) ->
+                    val label = when (key) {
+                        "W" -> getString(R.string.field_wash)
+                        "D" -> getString(R.string.field_drying)
+                        "I" -> getString(R.string.field_ironing)
+                        "B" -> getString(R.string.field_bleaching)
+                        "C" -> getString(R.string.field_dry_clean)
+                        else -> key
+                    }
+                    val decoded = when (key) {
+                        "W" -> when (code) {
+                            "30" -> getString(R.string.wash_30); "40" -> getString(R.string.wash_40)
+                            "60" -> getString(R.string.wash_60); "H"  -> getString(R.string.wash_hand)
+                            "N"  -> getString(R.string.wash_no); else -> code
+                        }
+                        "D" -> when (code) {
+                            "A" -> getString(R.string.dry_air);   "T" -> getString(R.string.dry_tumble)
+                            "F" -> getString(R.string.dry_flat);  "N" -> getString(R.string.dry_no); else -> code
+                        }
+                        "I" -> when (code) {
+                            "0" -> getString(R.string.iron_no);     "1" -> getString(R.string.iron_low)
+                            "2" -> getString(R.string.iron_medium); "3" -> getString(R.string.iron_high); else -> code
+                        }
+                        "B", "C" -> when (code) {
+                            "1" -> getString(R.string.yes); "0" -> getString(R.string.no); else -> code
+                        }
+                        else -> code
+                    }
+                    summaryParts.add("$label: $decoded")
+                }
+        }
+
+        val summaryText = summaryParts.joinToString("  ·  ")
+        tvOverlay.text  = summaryText
+        updateStatus(summaryText)
+        tvOverlay.announceForAccessibility(announcements.joinToString(". "))
 
         showResultActions()
     }
 
-    /**
-     * Builds a human-readable summary of detected fields using localised
-     * field labels and decoded values from strings.xml — no hardcoded strings.
-     */
-    private fun buildFieldSummary(fields: Map<String, String>): String {
-        val labelMap = mapOf(
-            "T"  to getString(R.string.field_type),
-            "CL" to getString(R.string.field_color),
-            "P"  to getString(R.string.field_pattern),
-            "W"  to getString(R.string.field_wash),
-            "D"  to getString(R.string.field_drying),
-            "I"  to getString(R.string.field_ironing),
-            "B"  to getString(R.string.field_bleaching),
-            "C"  to getString(R.string.field_dry_clean)
-        )
-        val typeMap = mapOf(
-            "SH" to getString(R.string.type_shirt),   "TS" to getString(R.string.type_tshirt),
-            "JK" to getString(R.string.type_jacket),  "CT" to getString(R.string.type_coat),
-            "SW" to getString(R.string.type_sweater), "HD" to getString(R.string.type_hoodie),
-            "BZ" to getString(R.string.type_blazer),  "SU" to getString(R.string.type_suit),
-            "VS" to getString(R.string.type_vest),    "DR" to getString(R.string.type_dress),
-            "UW" to getString(R.string.type_underwear),"PT" to getString(R.string.type_pants),
-            "JN" to getString(R.string.type_jeans),   "ST" to getString(R.string.type_shorts),
-            "SK" to getString(R.string.type_skirt),   "SC" to getString(R.string.type_socks)
-        )
-        val washMap = mapOf(
-            "30" to getString(R.string.wash_30), "40" to getString(R.string.wash_40),
-            "60" to getString(R.string.wash_60), "H"  to getString(R.string.wash_hand),
-            "N"  to getString(R.string.wash_no)
-        )
-        val dryMap = mapOf(
-            "A" to getString(R.string.dry_air),   "T" to getString(R.string.dry_tumble),
-            "F" to getString(R.string.dry_flat),  "N" to getString(R.string.dry_no)
-        )
-        val ironMap = mapOf(
-            "0" to getString(R.string.iron_no),     "1" to getString(R.string.iron_low),
-            "2" to getString(R.string.iron_medium), "3" to getString(R.string.iron_high)
-        )
-        val yesNoMap = mapOf("1" to getString(R.string.yes), "0" to getString(R.string.no))
-
-        return fields.entries.joinToString("  ·  ") { (key, code) ->
-            val label = labelMap[key] ?: key
-            val display = when (key) {
-                "T"  -> typeMap[code]
-                "CL" -> ColorPalette.nameForHex(code, ::getString)
-                "P"  -> when (code) {
-                    "P"  -> getString(R.string.pattern_plain)
-                    "ST" -> getString(R.string.pattern_striped)
-                    "CH" -> getString(R.string.pattern_checkered)
-                    "PL" -> getString(R.string.pattern_plaid)
-                    "FL" -> getString(R.string.pattern_floral)
-                    "DT" -> getString(R.string.pattern_polkadot)
-                    "GR" -> getString(R.string.pattern_graphic)
-                    "CM" -> getString(R.string.pattern_camouflage)
-                    "AN" -> getString(R.string.pattern_animal)
-                    else -> null
-                }
-                "W"  -> washMap[code]
-                "D"  -> dryMap[code]
-                "I"  -> ironMap[code]
-                "B"  -> yesNoMap[code]
-                "C"  -> yesNoMap[code]
-                else -> null
-            } ?: code
-            "$label: $display"
-        }
-    }
+    // ── Result actions ────────────────────────────────────────────────────────
 
     private fun showResultActions() {
         btnCapture.text = getString(R.string.camera_btn_use_results)
@@ -313,17 +352,13 @@ class CameraFragment : Fragment() {
         btnCare.contentDescription = getString(R.string.camera_btn_retake_description)
         btnCare.setOnClickListener {
             liveAnalysisActive = true
+            accumulatedFields.clear()
             btnCapture.text = getString(R.string.camera_btn_capture)
             btnCapture.contentDescription = getString(R.string.camera_btn_capture_description)
             btnCapture.setOnClickListener { captureAndAnalyze() }
-            btnCare.text = if (isCareLabelMode)
-                getString(R.string.camera_btn_clothing)
-            else
-                getString(R.string.camera_btn_care_label)
-            btnCare.setOnClickListener {
-                isCareLabelMode = !isCareLabelMode
-                updateModeUI()
-            }
+            btnCare.text = if (isCareLabelMode) getString(R.string.camera_btn_clothing)
+            else getString(R.string.camera_btn_care_label)
+            btnCare.setOnClickListener { isCareLabelMode = !isCareLabelMode; updateModeUI() }
             updateModeUI()
             updateStatus(getString(R.string.camera_ready))
         }
@@ -333,6 +368,8 @@ class CameraFragment : Fragment() {
         pendingResults = accumulatedFields.toMap()
         (activity as? MainActivity)?.onCameraResults(accumulatedFields.toMap(), source)
     }
+
+    // ── Utilities ─────────────────────────────────────────────────────────────
 
     private fun updateStatus(message: String) {
         requireActivity().runOnUiThread {
