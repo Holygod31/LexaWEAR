@@ -67,6 +67,9 @@
     <string name="btn_mic_description">Appuyez pour dicter votre réponse</string>
     <string name="btn_camera_description">Scanner le vêtement avec la caméra pour pré-remplir tous les champs</string>
     <string name="input_description">Champ de réponse</string>
+    <string name="btn_confirm_ok">OK</string>
+    <string name="btn_confirm_custom_size_description">Confirmer la taille personnalisée</string>
+    <string name="summary_description">Récapitulatif des informations du vêtement</string>
     <string name="dialog_overwrite_title">Écraser le tag ?</string>
     <string name="dialog_overwrite_message">Cela remplacera toutes les données existantes sur le tag. Continuer ?</string>
     <string name="dialog_overwrite_confirm">Écraser</string>
@@ -75,7 +78,6 @@
     <string name="dialog_tag_found_load">Charger ce tag pour modification ?</string>
     <string name="dialog_tag_found_load_discard">Charger ce tag pour modification ? Votre progression actuelle sera perdue.</string>
     <string name="dialog_load">Charger</string>
-    <string name="summary_description">Récapitulatif des informations du vêtement</string>
 
     <!-- Option buttons -->
     <string name="option_selected">Sélectionné</string>
@@ -111,6 +113,8 @@
     <string name="wardrobe_unknown_item">Article inconnu</string>
     <string name="wardrobe_legacy_rewrite">⚠ Ancien format. Il est recommandé de réécrire ce tag.</string>
     <string name="wardrobe_items_shown">%d articles affichés.</string>
+    <string name="item_double_tap">Double-tapez pour les détails.</string>
+    <string name="item_hint_edit_delete">Double-tapez pour modifier ou supprimer</string>
     <string name="btn_filters">Filtres</string>
     <string name="btn_filters_description">Ouvrir les options de filtre</string>
     <string name="btn_voice_filter_description">Appuyez pour filtrer par voix</string>
@@ -124,7 +128,6 @@
     <string name="dialog_delete_message">Retirer \"%s\" de votre garde-robe ?</string>
     <string name="dialog_delete_confirm">Supprimer</string>
     <string name="dialog_close">Fermer</string>
-    <string name="item_double_tap">Double-tapez pour les détails.</string>
     <string name="voice_filter_prompt">Décrivez ce que vous cherchez</string>
     <string name="size_label">Taille %s</string>
 
@@ -311,6 +314,8 @@
 
     <!-- Camera fragment -->
     <string name="camera_permission_required">La permission d\'accès à la caméra est requise pour cette fonctionnalité.</string>
+    <string name="camera_overlay_live_description">Résultats de reconnaissance en direct</string>
+    <string name="camera_mode_current_description">Mode caméra actuel</string>
     <string name="camera_mode_care_label">Prise 2 : Étiquette d\'entretien</string>
     <string name="camera_mode_care_label_description">Mode de scan de l\'étiquette d\'entretien</string>
     <string name="camera_overlay_care_label">Pointez la caméra vers l\'étiquette d\'entretien à l\'intérieur du vêtement</string>
@@ -323,6 +328,10 @@
     <string name="camera_btn_care_label">Étiquette\nd\'entretien</string>
     <string name="camera_btn_care_label_description">Passer au mode de scan d\'étiquette d\'entretien</string>
     <string name="camera_capture_clothing_description">Capturer l\'image du vêtement et analyser</string>
+    <string name="camera_btn_cancel">Annuler</string>
+    <string name="camera_btn_cancel_description">Annuler et revenir en arrière</string>
+    <string name="camera_btn_capture">📷  Capturer</string>
+    <string name="camera_btn_capture_description">Capturer l\'image et analyser le vêtement</string>
     <string name="camera_error">Erreur caméra : %s</string>
     <string name="camera_capturing">Capture en cours…</string>
     <string name="camera_capture_failed">Échec de la capture : %s</string>
@@ -338,8 +347,6 @@
     <string name="camera_btn_retake">Reprendre</string>
     <string name="camera_btn_retake_description">Reprendre la photo</string>
     <string name="camera_ready">Prêt. Appuyez sur Capturer quand vous êtes prêt.</string>
-    <string name="camera_btn_capture">📷  Capturer</string>
-    <string name="camera_btn_capture_description">Capturer l\'image et analyser le vêtement</string>
 
     <!-- Vision analyzer -->
     <string name="vision_analyzing">Analyse en cours…</string>

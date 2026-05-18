@@ -10,7 +10,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Filters"
+        android:text="@string/filter_title"
         android:textSize="24sp"
         android:textStyle="bold"
         android:textColor="?attr/colorOnBackground"
@@ -31,7 +31,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Type"
+                android:text="@string/filter_type_label"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="?attr/colorOnBackground"
@@ -51,7 +51,7 @@
                     android:text="◀"
                     android:textSize="22sp"
                     android:padding="0dp"
-                    android:contentDescription="Previous type" />
+                    android:contentDescription="@string/btn_prev_type" />
 
                 <TextView
                     android:id="@+id/tv_type_value"
@@ -72,7 +72,7 @@
                     android:text="▶"
                     android:textSize="22sp"
                     android:padding="0dp"
-                    android:contentDescription="Next type" />
+                    android:contentDescription="@string/btn_next_type" />
 
             </LinearLayout>
 
@@ -80,7 +80,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Color"
+                android:text="@string/filter_color_label"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="?attr/colorOnBackground"
@@ -100,7 +100,7 @@
                     android:text="◀"
                     android:textSize="22sp"
                     android:padding="0dp"
-                    android:contentDescription="Previous color" />
+                    android:contentDescription="@string/btn_prev_color" />
 
                 <TextView
                     android:id="@+id/tv_color_value"
@@ -121,7 +121,7 @@
                     android:text="▶"
                     android:textSize="22sp"
                     android:padding="0dp"
-                    android:contentDescription="Next color" />
+                    android:contentDescription="@string/btn_next_color" />
 
             </LinearLayout>
 
@@ -129,7 +129,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Season"
+                android:text="@string/filter_season_label"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="?attr/colorOnBackground"
@@ -149,7 +149,7 @@
                     android:text="◀"
                     android:textSize="22sp"
                     android:padding="0dp"
-                    android:contentDescription="Previous season" />
+                    android:contentDescription="@string/btn_prev_season" />
 
                 <TextView
                     android:id="@+id/tv_season_value"
@@ -170,7 +170,7 @@
                     android:text="▶"
                     android:textSize="22sp"
                     android:padding="0dp"
-                    android:contentDescription="Next season" />
+                    android:contentDescription="@string/btn_next_season" />
 
             </LinearLayout>
 
@@ -178,7 +178,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Formality"
+                android:text="@string/filter_formality_label"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="?attr/colorOnBackground"
@@ -198,7 +198,7 @@
                     android:text="◀"
                     android:textSize="22sp"
                     android:padding="0dp"
-                    android:contentDescription="Previous formality" />
+                    android:contentDescription="@string/btn_prev_formality" />
 
                 <TextView
                     android:id="@+id/tv_formality_value"
@@ -219,7 +219,7 @@
                     android:text="▶"
                     android:textSize="22sp"
                     android:padding="0dp"
-                    android:contentDescription="Next formality" />
+                    android:contentDescription="@string/btn_next_formality" />
 
             </LinearLayout>
 
@@ -239,18 +239,18 @@
             android:layout_height="72dp"
             android:layout_weight="1"
             android:layout_marginEnd="8dp"
-            android:text="Clear"
+            android:text="@string/btn_filter_clear"
             android:textSize="18sp"
-            android:contentDescription="Clear all filters" />
+            android:contentDescription="@string/btn_filter_clear_description" />
 
         <Button
             android:id="@+id/btn_filter_apply"
             android:layout_width="0dp"
             android:layout_height="72dp"
             android:layout_weight="1"
-            android:text="Apply"
+            android:text="@string/btn_filter_apply"
             android:textSize="18sp"
-            android:contentDescription="Apply filters and return to wardrobe" />
+            android:contentDescription="@string/btn_filter_apply_description" />
 
     </LinearLayout>
 

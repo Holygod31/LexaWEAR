@@ -10,7 +10,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Write Tag"
+        android:text="@string/write_title"
         android:textSize="24sp"
         android:textStyle="bold"
         android:textColor="?attr/colorOnBackground"
@@ -21,7 +21,7 @@
         android:id="@+id/tv_status"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Let's tag a clothing item."
+        android:text="@string/write_status_default"
         android:textSize="14sp"
         android:textColor="?attr/colorOnSurface"
         android:gravity="center"
@@ -37,7 +37,6 @@
         android:id="@+id/tv_step_indicator"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Step 1 of 14"
         android:textSize="12sp"
         android:textColor="?attr/colorOnSurface"
         android:layout_marginStart="16dp"
@@ -48,7 +47,6 @@
         android:id="@+id/tv_question"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="What is this item called?"
         android:textSize="20sp"
         android:textStyle="bold"
         android:textColor="?attr/colorOnBackground"
@@ -77,7 +75,7 @@
             android:padding="12dp"
             android:background="@drawable/input_background"
             android:inputType="textCapSentences"
-            android:contentDescription="Answer input field" />
+            android:contentDescription="@string/input_description" />
 
         <Button
             android:id="@+id/btn_mic"
@@ -87,11 +85,11 @@
             android:text="🎤"
             android:textSize="20sp"
             android:padding="0dp"
-            android:contentDescription="Tap to speak your answer" />
+            android:contentDescription="@string/btn_mic_description" />
 
     </LinearLayout>
 
-    <!-- Camera button (always visible — pre-fills all fields from vision) -->
+    <!-- Camera button -->
     <Button
         android:id="@+id/btn_camera"
         android:layout_width="match_parent"
@@ -99,9 +97,9 @@
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="8dp"
-        android:text="📷  Scan with camera"
+        android:text="@string/btn_camera_care"
         android:textSize="16sp"
-        android:contentDescription="Scan clothing with camera to pre-fill all fields" />
+        android:contentDescription="@string/btn_camera_description" />
 
     <!-- Option buttons container (enumerated steps) -->
     <ScrollView
@@ -122,7 +120,7 @@
 
     </ScrollView>
 
-    <!-- Custom size input (Size step only — shown after tapping "Enter custom size") -->
+    <!-- Custom size input -->
     <LinearLayout
         android:id="@+id/layout_custom_size"
         android:layout_width="match_parent"
@@ -143,16 +141,16 @@
             android:padding="12dp"
             android:background="@drawable/input_background"
             android:inputType="text"
-            android:hint="e.g. 32/32 or 38"
-            android:contentDescription="Enter custom size, for example 32 slash 32 for trouser measurements" />
+            android:hint="@string/size_custom"
+            android:contentDescription="@string/size_custom_prompt" />
 
         <Button
             android:id="@+id/btn_confirm_custom_size"
             android:layout_width="wrap_content"
             android:layout_height="56dp"
             android:layout_marginStart="8dp"
-            android:text="OK"
-            android:contentDescription="Confirm custom size" />
+            android:text="@string/btn_confirm_ok"
+            android:contentDescription="@string/btn_confirm_custom_size_description" />
 
     </LinearLayout>
 
@@ -183,35 +181,35 @@
             android:layout_width="0dp"
             android:layout_height="64dp"
             android:layout_weight="1"
-            android:text="Back"
+            android:text="@string/btn_back"
             android:textSize="16sp"
             android:layout_marginEnd="4dp"
-            android:contentDescription="Go back to previous field" />
+            android:contentDescription="@string/btn_back_description" />
 
         <Button
             android:id="@+id/btn_skip"
             android:layout_width="0dp"
             android:layout_height="64dp"
             android:layout_weight="1"
-            android:text="Skip"
+            android:text="@string/btn_skip"
             android:textSize="16sp"
             android:layout_marginStart="4dp"
             android:layout_marginEnd="4dp"
-            android:contentDescription="Skip this question" />
+            android:contentDescription="@string/btn_skip_description" />
 
         <Button
             android:id="@+id/btn_next"
             android:layout_width="0dp"
             android:layout_height="64dp"
             android:layout_weight="1"
-            android:text="Next"
+            android:text="@string/btn_next"
             android:textSize="16sp"
             android:layout_marginStart="4dp"
-            android:contentDescription="Go to next field" />
+            android:contentDescription="@string/btn_next_description" />
 
     </LinearLayout>
 
-    <!-- Summary screen (hidden until final step) -->
+    <!-- Summary screen -->
     <ScrollView
         android:id="@+id/layout_summary"
         android:layout_width="match_parent"
@@ -228,20 +226,20 @@
             android:textSize="15sp"
             android:textColor="?attr/colorOnBackground"
             android:lineSpacingExtra="6dp"
-            android:contentDescription="Summary of entered clothing information"
+            android:contentDescription="@string/summary_description"
             android:accessibilityLiveRegion="polite" />
 
     </ScrollView>
 
-    <!-- Write button pinned to bottom -->
+    <!-- Write button -->
     <Button
         android:id="@+id/btn_write"
         android:layout_width="match_parent"
         android:layout_height="72dp"
-        android:text="Write to Tag"
+        android:text="@string/btn_write"
         android:textSize="18sp"
         android:layout_margin="16dp"
         android:visibility="gone"
-        android:contentDescription="Write entered information to NFC tag" />
+        android:contentDescription="@string/btn_write_description" />
 
 </LinearLayout>

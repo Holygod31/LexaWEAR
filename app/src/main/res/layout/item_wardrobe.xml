@@ -41,7 +41,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Double tap to edit or delete"
+            android:text="@string/item_hint_edit_delete"
             android:textSize="11sp"
             android:textColor="?attr/colorPrimary"
             android:layout_marginTop="2dp"

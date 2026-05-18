@@ -67,6 +67,9 @@
     <string name="btn_mic_description">Tap to speak your answer</string>
     <string name="btn_camera_description">Scan clothing with camera to pre-fill all fields</string>
     <string name="input_description">Answer input field</string>
+    <string name="btn_confirm_ok">OK</string>
+    <string name="btn_confirm_custom_size_description">Confirm custom size</string>
+    <string name="summary_description">Summary of entered clothing information</string>
     <string name="dialog_overwrite_title">Overwrite Tag?</string>
     <string name="dialog_overwrite_message">This will replace all existing data on the tag. Continue?</string>
     <string name="dialog_overwrite_confirm">Overwrite</string>
@@ -75,7 +78,6 @@
     <string name="dialog_tag_found_load">Load this tag for editing?</string>
     <string name="dialog_tag_found_load_discard">Load this tag for editing? This will discard your current progress.</string>
     <string name="dialog_load">Load</string>
-    <string name="summary_description">Summary of entered clothing information</string>
 
     <!-- Option buttons -->
     <string name="option_selected">Selected</string>
@@ -111,6 +113,8 @@
     <string name="wardrobe_unknown_item">Unknown Item</string>
     <string name="wardrobe_legacy_rewrite">⚠ Old format. Rewriting this tag is recommended.</string>
     <string name="wardrobe_items_shown">%d items shown.</string>
+    <string name="item_double_tap">Double tap for details.</string>
+    <string name="item_hint_edit_delete">Double tap to edit or delete</string>
     <string name="btn_filters">Filters</string>
     <string name="btn_filters_description">Open filter options</string>
     <string name="btn_voice_filter_description">Tap to filter by voice</string>
@@ -124,7 +128,6 @@
     <string name="dialog_delete_message">Remove \"%s\" from your wardrobe?</string>
     <string name="dialog_delete_confirm">Delete</string>
     <string name="dialog_close">Close</string>
-    <string name="item_double_tap">Double tap for details.</string>
     <string name="voice_filter_prompt">Describe what you\'re looking for</string>
     <string name="size_label">Size %s</string>
 
@@ -311,6 +314,8 @@
 
     <!-- Camera fragment -->
     <string name="camera_permission_required">Camera permission is required for this feature.</string>
+    <string name="camera_overlay_live_description">Live recognition results</string>
+    <string name="camera_mode_current_description">Current camera mode</string>
     <string name="camera_mode_care_label">Shot 2: Care Label</string>
     <string name="camera_mode_care_label_description">Care label scanning mode</string>
     <string name="camera_overlay_care_label">Point camera at the care label inside the garment</string>
@@ -323,6 +328,10 @@
     <string name="camera_btn_care_label">Care\nLabel</string>
     <string name="camera_btn_care_label_description">Switch to care label scanning mode</string>
     <string name="camera_capture_clothing_description">Capture clothing image and analyze</string>
+    <string name="camera_btn_cancel">Cancel</string>
+    <string name="camera_btn_cancel_description">Cancel and go back</string>
+    <string name="camera_btn_capture">📷  Capture</string>
+    <string name="camera_btn_capture_description">Capture image and analyze clothing</string>
     <string name="camera_error">Camera error: %s</string>
     <string name="camera_capturing">Capturing…</string>
     <string name="camera_capture_failed">Capture failed: %s</string>
@@ -338,8 +347,6 @@
     <string name="camera_btn_retake">Retake</string>
     <string name="camera_btn_retake_description">Retake the photo</string>
     <string name="camera_ready">Ready. Tap Capture when ready.</string>
-    <string name="camera_btn_capture">📷  Capture</string>
-    <string name="camera_btn_capture_description">Capture image and analyze clothing</string>
 
     <!-- Vision analyzer -->
     <string name="vision_analyzing">Analyzing…</string>

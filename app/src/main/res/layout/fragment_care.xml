@@ -21,7 +21,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Care Instructions"
+                android:text="@string/care_title"
                 android:textSize="26sp"
                 android:textStyle="bold"
                 android:textColor="?attr/colorOnBackground"
@@ -32,7 +32,7 @@
                 android:id="@+id/tv_care_status"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Hold your phone to a clothing tag."
+                android:text="@string/care_status_default"
                 android:textSize="15sp"
                 android:textColor="?attr/colorOnSurface"
                 android:gravity="center"
@@ -65,27 +65,27 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- Add to wardrobe button, hidden until tag scanned -->
+    <!-- Add to wardrobe button -->
     <Button
         android:id="@+id/btn_add_to_wardrobe"
         android:layout_width="match_parent"
         android:layout_height="72dp"
-        android:text="Add to Wardrobe"
+        android:text="@string/btn_add_to_wardrobe"
         android:textSize="18sp"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="4dp"
         android:visibility="gone"
-        android:contentDescription="Add this clothing item to your wardrobe" />
+        android:contentDescription="@string/btn_add_to_wardrobe_description" />
 
-    <!-- Camera button for care label scanning -->
+    <!-- Camera button -->
     <Button
         android:id="@+id/btn_camera_care"
         android:layout_width="match_parent"
         android:layout_height="64dp"
-        android:text="📷  Scan Care Label"
+        android:text="@string/btn_camera_care"
         android:textSize="16sp"
         android:layout_margin="16dp"
-        android:contentDescription="Open camera to scan care label symbols and text" />
+        android:contentDescription="@string/btn_camera_care_description" />
 
 </LinearLayout>
