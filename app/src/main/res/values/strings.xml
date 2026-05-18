@@ -45,7 +45,7 @@
     <string name="write_title">Write Tag</string>
     <string name="write_status_default">Let\'s tag a clothing item.</string>
     <string name="write_status_scan_or_answer">Scan a tag to edit it, or answer each question to write a new one.</string>
-    <string name="write_status_answer">Answer each question to tag this item.</string>
+    <string name="write_status_answer">Choose an option or answer the question.</string>
     <string name="write_status_review">Review your answers, then tap Write to Tag.</string>
     <string name="write_status_hold_tag">Hold your phone to an NFC tag to write to it.</string>
     <string name="write_status_hold_overwrite">Hold your phone to the tag to overwrite it.</string>
@@ -65,10 +65,8 @@
     <string name="btn_write">Write to Tag</string>
     <string name="btn_write_description">Write entered information to NFC tag</string>
     <string name="btn_mic_description">Tap to speak your answer</string>
-    <string name="btn_camera_description">Tap to scan clothing with camera and pre-fill fields</string>
+    <string name="btn_camera_description">Scan clothing with camera to pre-fill all fields</string>
     <string name="input_description">Answer input field</string>
-    <string name="btn_show_options">Show all options</string>
-    <string name="btn_show_options_description">Show all options. Double tap to expand full list.</string>
     <string name="dialog_overwrite_title">Overwrite Tag?</string>
     <string name="dialog_overwrite_message">This will replace all existing data on the tag. Continue?</string>
     <string name="dialog_overwrite_confirm">Overwrite</string>
@@ -78,6 +76,23 @@
     <string name="dialog_tag_found_load_discard">Load this tag for editing? This will discard your current progress.</string>
     <string name="dialog_load">Load</string>
     <string name="summary_description">Summary of entered clothing information</string>
+
+    <!-- Option buttons (enumerated steps) -->
+    <string name="option_selected">Selected</string>
+    <string name="you_said">You said:</string>
+
+    <!-- Size step -->
+    <string name="size_xs">Extra Small (XS)</string>
+    <string name="size_s">Small (S)</string>
+    <string name="size_m">Medium (M)</string>
+    <string name="size_l">Large (L)</string>
+    <string name="size_xl">Extra Large (XL)</string>
+    <string name="size_xxl">Double Extra Large (XXL)</string>
+    <string name="size_xxxl">Triple Extra Large (XXXL)</string>
+    <string name="size_custom">Enter custom size (e.g. 32/32)</string>
+    <string name="size_custom_prompt">Type your size. For trousers, use format 32 slash 32.</string>
+    <string name="write_error_size_empty">Please type a size or go back and choose from the list.</string>
+    <string name="write_error_name_required">Please enter a name for this item.</string>
 
     <!-- Wardrobe fragment -->
     <string name="wardrobe_title">Wardrobe</string>
@@ -93,6 +108,9 @@
     <string name="wardrobe_legacy_banner_description">Warning. ⚠ %d item(s) use the old format. Consider rewriting them.</string>
     <string name="wardrobe_no_filters">No filters active</string>
     <string name="wardrobe_active_filters">Filters: %s</string>
+    <string name="wardrobe_unknown_item">Unknown Item</string>
+    <string name="wardrobe_legacy_rewrite">⚠ Old format. Rewriting this tag is recommended.</string>
+    <string name="wardrobe_items_shown">%d items shown.</string>
     <string name="btn_filters">Filters</string>
     <string name="btn_filters_description">Open filter options</string>
     <string name="btn_voice_filter_description">Tap to filter by voice</string>
@@ -116,6 +134,10 @@
     <string name="filter_color_label">Color</string>
     <string name="filter_season_label">Season</string>
     <string name="filter_formality_label">Formality</string>
+    <string name="filter_all_types">All Types</string>
+    <string name="filter_all_colors">All Colors</string>
+    <string name="filter_all_seasons">All Seasons</string>
+    <string name="filter_all_formality">All Formality</string>
     <string name="btn_filter_apply">Apply</string>
     <string name="btn_filter_apply_description">Apply filters and return to wardrobe</string>
     <string name="btn_filter_clear">Clear</string>
@@ -242,49 +264,20 @@
     <string name="step_q_dry_clean">Can it be dry cleaned?</string>
     <string name="step_q_notes">Any extra notes?</string>
 
-    <!-- Write step hints -->
+    <!-- Write step hints (free-text steps only: Name, Material, Notes) -->
     <string name="step_h_name">e.g. Blue Winter Jacket</string>
-    <string name="step_h_type">e.g. Jacket, Shirt, Pants</string>
-    <string name="step_h_color">e.g. Blue, Black, Multicolor</string>
-    <string name="step_h_pattern">e.g. Plain, Striped, Checkered</string>
-    <string name="step_h_size">e.g. M, L, XL, 32/32, 38</string>
-    <string name="step_h_formality">e.g. Casual, Smart Casual, Formal</string>
-    <string name="step_h_season">e.g. Winter, Summer, All-Season</string>
+    <string name="step_h_type">Choose from the list below</string>
+    <string name="step_h_color">Choose from the list below</string>
+    <string name="step_h_pattern">Choose from the list below</string>
+    <string name="step_h_size">Choose a size or enter a custom size</string>
+    <string name="step_h_formality">Choose from the list below</string>
+    <string name="step_h_season">Choose from the list below</string>
     <string name="step_h_material">e.g. Cotton, Wool, Polyester</string>
-    <string name="step_h_wash">e.g. 30, 40, 60, Hand Wash</string>
-    <string name="step_h_dry">e.g. Air, Tumble, Flat</string>
-    <string name="step_h_iron">e.g. No Iron, Low, High</string>
-    <string name="step_h_bleach">e.g. Yes, No</string>
-    <string name="step_h_dry_clean">e.g. Yes, No</string>
+    <string name="step_h_wash">Choose from the list below</string>
+    <string name="step_h_dry">Choose from the list below</string>
+    <string name="step_h_iron">Choose from the list below</string>
+    <string name="step_h_bleach">Choose Yes or No</string>
+    <string name="step_h_dry_clean">Choose Yes or No</string>
     <string name="step_h_notes">e.g. Goes well with black pants</string>
 
-    <!-- Write rejection messages -->
-    <string name="write_error_name_required">Please enter a name for this item.</string>
-    <string name="write_error_not_recognized">Sorry, I didn\'t catch that.</string>
-    <string name="reject_type">Try saying the clothing type, like shirt, jacket, or pants.</string>
-    <string name="reject_color">Try black, white, grey, navy, blue, red, green, yellow, orange, pink, purple, brown, beige, or multicolor.</string>
-    <string name="reject_pattern">Try saying the pattern, like plain, striped, or checkered.</string>
-    <string name="reject_size">Try a size like medium, large, 32 by 32, or 38.</string>
-    <string name="reject_formality">Try casual, business, formal, sport, lounge, smart casual, business casual, or smart formal.</string>
-    <string name="reject_season">Try winter, spring, summer, autumn, or all-season. You can combine seasons, like spring and summer.</string>
-    <string name="reject_wash">Try 30, 40, 60, hand wash, or do not wash.</string>
-    <string name="reject_dry">Try air dry, tumble dry, flat dry, or do not dry.</string>
-    <string name="reject_iron">Try no iron, low, medium, or high.</string>
-    <string name="reject_yes_no">Try yes or no.</string>
-    <string name="reject_default">Please rephrase your answer.</string>
-
-    <!-- Full options lists -->
-    <string name="options_type">All clothing types:\nShirt, T-Shirt, Jacket, Coat, Sweater, Hoodie, Blazer, Suit, Vest, Dress, Underwear, Pants, Jeans, Shorts, Skirt, Socks</string>
-    <string name="options_pattern">All patterns:\nPlain, Striped, Checkered, Plaid, Floral, Polka Dot, Graphic, Camouflage, Animal Print</string>
-    <string name="options_color">All colors:\nBlack, White, Grey, Navy, Blue, Red, Green, Yellow, Orange, Pink, Purple, Brown, Beige, Multicolor</string>
-    <string name="options_collapsed">Options list collapsed.</string>
-
-    <string name="wardrobe_unknown_item">Unknown Item</string>
-    <string name="wardrobe_legacy_rewrite">⚠ Old format. Rewriting this tag is recommended.</string>
-    <string name="wardrobe_items_shown">%d items shown.</string>
-
-    <string name="filter_all_types">All Types</string>
-    <string name="filter_all_colors">All Colors</string>
-    <string name="filter_all_seasons">All Seasons</string>
-    <string name="filter_all_formality">All Formality</string>
 </resources>

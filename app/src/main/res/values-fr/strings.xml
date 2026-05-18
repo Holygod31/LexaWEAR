@@ -45,7 +45,7 @@
     <string name="write_title">Écrire un tag</string>
     <string name="write_status_default">Taguons un vêtement.</string>
     <string name="write_status_scan_or_answer">Scannez un tag pour le modifier, ou répondez aux questions pour en écrire un nouveau.</string>
-    <string name="write_status_answer">Répondez à chaque question pour taguer ce vêtement.</string>
+    <string name="write_status_answer">Choisissez une option ou répondez à la question.</string>
     <string name="write_status_review">Vérifiez vos réponses, puis appuyez sur Écrire le tag.</string>
     <string name="write_status_hold_tag">Approchez votre téléphone d\'un tag NFC pour écrire.</string>
     <string name="write_status_hold_overwrite">Approchez votre téléphone du tag pour l\'écraser.</string>
@@ -65,10 +65,8 @@
     <string name="btn_write">Écrire le tag</string>
     <string name="btn_write_description">Écrire les informations sur le tag NFC</string>
     <string name="btn_mic_description">Appuyez pour dicter votre réponse</string>
-    <string name="btn_camera_description">Appuyez pour scanner le vêtement avec la caméra</string>
+    <string name="btn_camera_description">Scanner le vêtement avec la caméra pour pré-remplir tous les champs</string>
     <string name="input_description">Champ de réponse</string>
-    <string name="btn_show_options">Voir toutes les options</string>
-    <string name="btn_show_options_description">Voir toutes les options. Double-tapez pour afficher la liste complète.</string>
     <string name="dialog_overwrite_title">Écraser le tag ?</string>
     <string name="dialog_overwrite_message">Cela remplacera toutes les données existantes sur le tag. Continuer ?</string>
     <string name="dialog_overwrite_confirm">Écraser</string>
@@ -78,6 +76,23 @@
     <string name="dialog_tag_found_load_discard">Charger ce tag pour modification ? Votre progression actuelle sera perdue.</string>
     <string name="dialog_load">Charger</string>
     <string name="summary_description">Récapitulatif des informations du vêtement</string>
+
+    <!-- Option buttons (enumerated steps) -->
+    <string name="option_selected">Sélectionné</string>
+    <string name="you_said">Vous avez dit :</string>
+
+    <!-- Size step -->
+    <string name="size_xs">Très Petit (XS)</string>
+    <string name="size_s">Petit (S)</string>
+    <string name="size_m">Moyen (M)</string>
+    <string name="size_l">Grand (L)</string>
+    <string name="size_xl">Très Grand (XL)</string>
+    <string name="size_xxl">Double Extra Grand (XXL)</string>
+    <string name="size_xxxl">Triple Extra Grand (XXXL)</string>
+    <string name="size_custom">Saisir une taille personnalisée (ex. 32/32)</string>
+    <string name="size_custom_prompt">Tapez votre taille. Pour les pantalons, utilisez le format 32 barre 32.</string>
+    <string name="write_error_size_empty">Veuillez saisir une taille ou revenir en arrière pour choisir dans la liste.</string>
+    <string name="write_error_name_required">Veuillez entrer un nom pour cet article.</string>
 
     <!-- Wardrobe fragment -->
     <string name="wardrobe_title">Garde-robe</string>
@@ -249,40 +264,20 @@
     <string name="step_q_dry_clean">Peut-il être nettoyé à sec ?</string>
     <string name="step_q_notes">Des notes supplémentaires ?</string>
 
-    <!-- Write step hints -->
+    <!-- Write step hints (free-text steps only: Name, Material, Notes) -->
     <string name="step_h_name">ex. Veste bleue d\'hiver</string>
-    <string name="step_h_type">ex. Veste, Chemise, Pantalon</string>
-    <string name="step_h_color">ex. Bleu, Noir, Multicolore</string>
-    <string name="step_h_pattern">ex. Uni, Rayé, Quadrillé</string>
-    <string name="step_h_size">ex. M, L, XL, 32/32, 38</string>
-    <string name="step_h_formality">ex. Décontracté, Smart casual, Formel</string>
-    <string name="step_h_season">ex. Hiver, Été, Toutes saisons</string>
+    <string name="step_h_type">Choisissez dans la liste ci-dessous</string>
+    <string name="step_h_color">Choisissez dans la liste ci-dessous</string>
+    <string name="step_h_pattern">Choisissez dans la liste ci-dessous</string>
+    <string name="step_h_size">Choisissez une taille ou saisissez une taille personnalisée</string>
+    <string name="step_h_formality">Choisissez dans la liste ci-dessous</string>
+    <string name="step_h_season">Choisissez dans la liste ci-dessous</string>
     <string name="step_h_material">ex. Coton, Laine, Polyester</string>
-    <string name="step_h_wash">ex. 30, 40, 60, À la main</string>
-    <string name="step_h_dry">ex. Air, Sèche-linge, À plat</string>
-    <string name="step_h_iron">ex. Ne pas repasser, Faible, Élevé</string>
-    <string name="step_h_bleach">ex. Oui, Non</string>
-    <string name="step_h_dry_clean">ex. Oui, Non</string>
+    <string name="step_h_wash">Choisissez dans la liste ci-dessous</string>
+    <string name="step_h_dry">Choisissez dans la liste ci-dessous</string>
+    <string name="step_h_iron">Choisissez dans la liste ci-dessous</string>
+    <string name="step_h_bleach">Choisissez Oui ou Non</string>
+    <string name="step_h_dry_clean">Choisissez Oui ou Non</string>
     <string name="step_h_notes">ex. Va bien avec un pantalon noir</string>
 
-    <!-- Write rejection messages -->
-    <string name="write_error_name_required">Veuillez entrer un nom pour cet article.</string>
-    <string name="write_error_not_recognized">Désolé, je n\'ai pas compris.</string>
-    <string name="reject_type">Essayez de dire le type de vêtement, comme chemise, veste ou pantalon.</string>
-    <string name="reject_color">Essayez noir, blanc, gris, marine, bleu, rouge, vert, jaune, orange, rose, violet, marron, beige ou multicolore.</string>
-    <string name="reject_pattern">Essayez de dire le motif, comme uni, rayé ou quadrillé.</string>
-    <string name="reject_size">Essayez une taille comme medium, large, 32 par 32, ou 38.</string>
-    <string name="reject_formality">Essayez décontracté, professionnel, formel, sport, détente, smart casual, business casual ou smart formel.</string>
-    <string name="reject_season">Essayez hiver, printemps, été, automne ou toutes saisons. Vous pouvez combiner des saisons, comme printemps et été.</string>
-    <string name="reject_wash">Essayez 30, 40, 60, à la main, ou ne pas laver.</string>
-    <string name="reject_dry">Essayez séchage à l\'air, sèche-linge, à plat, ou ne pas sécher.</string>
-    <string name="reject_iron">Essayez ne pas repasser, faible, moyen ou élevé.</string>
-    <string name="reject_yes_no">Essayez oui ou non.</string>
-    <string name="reject_default">Veuillez reformuler votre réponse.</string>
-
-    <!-- Full options lists -->
-    <string name="options_type">Tous les types :\nChemise, T-shirt, Veste, Manteau, Pull, Sweat à capuche, Blazer, Costume, Gilet, Robe, Sous-vêtement, Pantalon, Jean, Short, Jupe, Chaussettes</string>
-    <string name="options_pattern">Tous les motifs :\nUni, Rayé, Quadrillé, Écossais, Fleuri, Pois, Graphique, Camouflage, Imprimé animal</string>
-    <string name="options_color">Toutes les couleurs :\nNoir, Blanc, Gris, Marine, Bleu, Rouge, Vert, Jaune, Orange, Rose, Violet, Marron, Beige, Multicolore</string>
-    <string name="options_collapsed">Liste d\'options réduite.</string>
 </resources>

@@ -54,11 +54,12 @@
         android:textColor="?attr/colorOnBackground"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="12dp"
         android:accessibilityLiveRegion="polite" />
 
-    <!-- Input field + mic button -->
+    <!-- Free-text input row (Name, Material, Notes only) -->
     <LinearLayout
+        android:id="@+id/layout_free_text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
@@ -88,15 +89,70 @@
             android:padding="0dp"
             android:contentDescription="Tap to speak your answer" />
 
+    </LinearLayout>
+
+    <!-- Camera button (always visible — pre-fills all fields from vision) -->
+    <Button
+        android:id="@+id/btn_camera"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="8dp"
+        android:text="📷  Scan with camera"
+        android:textSize="16sp"
+        android:contentDescription="Scan clothing with camera to pre-fill all fields" />
+
+    <!-- Option buttons container (enumerated steps) -->
+    <ScrollView
+        android:id="@+id/scroll_options"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="8dp"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/options_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+    </ScrollView>
+
+    <!-- Custom size input (Size step only — shown after tapping "Enter custom size") -->
+    <LinearLayout
+        android:id="@+id/layout_custom_size"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="8dp"
+        android:gravity="center_vertical"
+        android:visibility="gone">
+
+        <EditText
+            android:id="@+id/et_custom_size"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:layout_weight="1"
+            android:textSize="16sp"
+            android:padding="12dp"
+            android:background="@drawable/input_background"
+            android:inputType="text"
+            android:hint="e.g. 32/32 or 38"
+            android:contentDescription="Enter custom size, for example 32 slash 32 for trouser measurements" />
+
         <Button
-            android:id="@+id/btn_camera"
-            android:layout_width="56dp"
+            android:id="@+id/btn_confirm_custom_size"
+            android:layout_width="wrap_content"
             android:layout_height="56dp"
             android:layout_marginStart="8dp"
-            android:text="📷"
-            android:textSize="20sp"
-            android:padding="0dp"
-            android:contentDescription="Tap to scan clothing with camera and pre-fill fields" />
+            android:text="OK"
+            android:contentDescription="Confirm custom size" />
 
     </LinearLayout>
 
@@ -112,23 +168,6 @@
         android:layout_marginBottom="4dp"
         android:visibility="gone"
         android:accessibilityLiveRegion="polite" />
-
-    <!-- Show all options button — visible only after a rejection on fields with many options -->
-    <Button
-        android:id="@+id/btn_show_options"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:minHeight="64dp"
-        android:text="Show all options"
-        android:textSize="15sp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="8dp"
-        android:visibility="gone"
-        android:gravity="start|center_vertical"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:contentDescription="Show all options. Double tap to expand full list." />
 
     <!-- Navigation buttons -->
     <LinearLayout

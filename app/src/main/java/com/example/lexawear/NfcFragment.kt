@@ -3,6 +3,7 @@ package com.example.lexawear
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
+import android.graphics.Typeface
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.nfc.tech.Ndef
@@ -16,22 +17,31 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import java.util.Locale
 
 class NfcFragment : Fragment() {
 
+    // ── Views ─────────────────────────────────────────────────────────────────
+
     private lateinit var tvStatus: TextView
     private lateinit var tvStepIndicator: TextView
     private lateinit var tvQuestion: TextView
+    private lateinit var layoutFreeText: LinearLayout
     private lateinit var etStepInput: EditText
-    private lateinit var tvStepError: TextView
-    private lateinit var btnShowOptions: Button
     private lateinit var btnMic: Button
     private lateinit var btnCamera: Button
+    private lateinit var scrollOptions: ScrollView
+    private lateinit var optionsContainer: LinearLayout
+    private lateinit var layoutCustomSize: LinearLayout
+    private lateinit var etCustomSize: EditText
+    private lateinit var btnConfirmCustomSize: Button
+    private lateinit var tvStepError: TextView
     private lateinit var btnBack: Button
     private lateinit var btnSkip: Button
     private lateinit var btnNext: Button
@@ -39,27 +49,31 @@ class NfcFragment : Fragment() {
     private lateinit var tvSummary: TextView
     private lateinit var btnWrite: Button
 
+    // ── State ─────────────────────────────────────────────────────────────────
+
     var pendingVisionResults: Map<String, String>? = null
 
     private var nfcAdapter: NfcAdapter? = null
     private var isWriting = false
     private var isEditingExistingTag = false
 
+    // ── Steps definition ──────────────────────────────────────────────────────
+
     private val steps get() = listOf(
-        Step("N",  getString(R.string.step_q_name),     getString(R.string.step_h_name)),
-        Step("T",  getString(R.string.step_q_type),     getString(R.string.step_h_type)),
-        Step("CL", getString(R.string.step_q_color),    getString(R.string.step_h_color)),
-        Step("P",  getString(R.string.step_q_pattern),  getString(R.string.step_h_pattern)),
-        Step("S",  getString(R.string.step_q_size),     getString(R.string.step_h_size)),
-        Step("F",  getString(R.string.step_q_formality),getString(R.string.step_h_formality)),
-        Step("SE", getString(R.string.step_q_season),   getString(R.string.step_h_season)),
-        Step("M",  getString(R.string.step_q_material), getString(R.string.step_h_material)),
-        Step("W",  getString(R.string.step_q_wash),     getString(R.string.step_h_wash)),
-        Step("D",  getString(R.string.step_q_dry),      getString(R.string.step_h_dry)),
-        Step("I",  getString(R.string.step_q_iron),     getString(R.string.step_h_iron)),
-        Step("B",  getString(R.string.step_q_bleach),   getString(R.string.step_h_bleach)),
-        Step("C",  getString(R.string.step_q_dry_clean),getString(R.string.step_h_dry_clean)),
-        Step("X",  getString(R.string.step_q_notes),    getString(R.string.step_h_notes))
+        Step("N",  getString(R.string.step_q_name),      getString(R.string.step_h_name)),
+        Step("T",  getString(R.string.step_q_type),      getString(R.string.step_h_type)),
+        Step("CL", getString(R.string.step_q_color),     getString(R.string.step_h_color)),
+        Step("P",  getString(R.string.step_q_pattern),   getString(R.string.step_h_pattern)),
+        Step("S",  getString(R.string.step_q_size),      getString(R.string.step_h_size)),
+        Step("F",  getString(R.string.step_q_formality), getString(R.string.step_h_formality)),
+        Step("SE", getString(R.string.step_q_season),    getString(R.string.step_h_season)),
+        Step("M",  getString(R.string.step_q_material),  getString(R.string.step_h_material)),
+        Step("W",  getString(R.string.step_q_wash),      getString(R.string.step_h_wash)),
+        Step("D",  getString(R.string.step_q_dry),       getString(R.string.step_h_dry)),
+        Step("I",  getString(R.string.step_q_iron),      getString(R.string.step_h_iron)),
+        Step("B",  getString(R.string.step_q_bleach),    getString(R.string.step_h_bleach)),
+        Step("C",  getString(R.string.step_q_dry_clean), getString(R.string.step_h_dry_clean)),
+        Step("X",  getString(R.string.step_q_notes),     getString(R.string.step_h_notes))
     )
 
     private val answers = mutableMapOf<String, String>()
@@ -67,8 +81,14 @@ class NfcFragment : Fragment() {
 
     data class Step(val key: String, val question: String, val hint: String)
 
-    private val interpretedKeys = setOf("T", "CL", "P", "S", "F", "SE", "W", "D", "I", "B", "C")
-    private val validatedKeys   = setOf("T", "CL", "P", "S", "F", "SE", "W", "D", "I", "B", "C")
+    // Keys that use option buttons instead of free-text input.
+    // S (Size) is enumerated but also has a "custom" escape hatch.
+    private val enumeratedKeys = setOf("T", "CL", "P", "S", "F", "SE", "W", "D", "I", "B", "C")
+
+    // Free-text keys — use EditText + microphone.
+    private val freeTextKeys = setOf("N", "M", "X")
+
+    // ── Lookup tables (get() so getString() runs after fragment attach) ───────
 
     private val hexToName get() = mapOf(
         "212121" to getString(R.string.color_black),
@@ -120,11 +140,14 @@ class NfcFragment : Fragment() {
     )
 
     private val formalitySingleToName get() = linkedMapOf(
-        "C" to getString(R.string.formality_casual),
-        "B" to getString(R.string.formality_business),
-        "F" to getString(R.string.formality_formal),
-        "S" to getString(R.string.formality_sport),
-        "L" to getString(R.string.formality_lounge)
+        "C"  to getString(R.string.formality_casual),
+        "B"  to getString(R.string.formality_business),
+        "F"  to getString(R.string.formality_formal),
+        "S"  to getString(R.string.formality_sport),
+        "L"  to getString(R.string.formality_lounge),
+        "SC" to getString(R.string.formality_smart_casual),
+        "BC" to getString(R.string.formality_business_casual),
+        "SF" to getString(R.string.formality_smart_formal)
     )
 
     private val formalityComboToName get() = mapOf(
@@ -143,27 +166,67 @@ class NfcFragment : Fragment() {
 
     private val seasonCodesByLength = listOf("AS", "SP", "SU", "W", "A")
 
-    private fun rejectionMessage(key: String): String = when (key) {
-        "T"  -> getString(R.string.reject_type)
-        "CL" -> getString(R.string.reject_color)
-        "P"  -> getString(R.string.reject_pattern)
-        "S"  -> getString(R.string.reject_size)
-        "F"  -> getString(R.string.reject_formality)
-        "SE" -> getString(R.string.reject_season)
-        "W"  -> getString(R.string.reject_wash)
-        "D"  -> getString(R.string.reject_dry)
-        "I"  -> getString(R.string.reject_iron)
-        "B"  -> getString(R.string.reject_yes_no)
-        "C"  -> getString(R.string.reject_yes_no)
-        else -> getString(R.string.reject_default)
-    }
+    // Standard letter sizes shown as buttons on the Size step.
+    // "CUSTOM" is a sentinel that reveals the free-text custom size field.
+    private val sizeOptions get() = linkedMapOf(
+        "XS"     to getString(R.string.size_xs),
+        "S"      to getString(R.string.size_s),
+        "M"      to getString(R.string.size_m),
+        "L"      to getString(R.string.size_l),
+        "XL"     to getString(R.string.size_xl),
+        "XXL"    to getString(R.string.size_xxl),
+        "XXXL"   to getString(R.string.size_xxxl),
+        "OS"     to getString(R.string.one_size),
+        "CUSTOM" to getString(R.string.size_custom)
+    )
 
-    private fun fullOptionsList(key: String): String? = when (key) {
-        "T"  -> getString(R.string.options_type)
-        "P"  -> getString(R.string.options_pattern)
-        "CL" -> getString(R.string.options_color)
+    private val washOptions get() = linkedMapOf(
+        "30" to getString(R.string.wash_30),
+        "40" to getString(R.string.wash_40),
+        "60" to getString(R.string.wash_60),
+        "H"  to getString(R.string.wash_hand),
+        "N"  to getString(R.string.wash_no)
+    )
+
+    private val dryOptions get() = linkedMapOf(
+        "A" to getString(R.string.dry_air),
+        "T" to getString(R.string.dry_tumble),
+        "F" to getString(R.string.dry_flat),
+        "N" to getString(R.string.dry_no)
+    )
+
+    private val ironOptions get() = linkedMapOf(
+        "0" to getString(R.string.iron_no),
+        "1" to getString(R.string.iron_low),
+        "2" to getString(R.string.iron_medium),
+        "3" to getString(R.string.iron_high)
+    )
+
+    private val yesNoOptions get() = linkedMapOf(
+        "1" to getString(R.string.yes),
+        "0" to getString(R.string.no)
+    )
+
+    /**
+     * Returns the ordered map of code → display label for an enumerated step,
+     * or null if the step uses free-text input.
+     */
+    private fun optionsForKey(key: String): LinkedHashMap<String, String>? = when (key) {
+        "T"  -> typeCodeToName
+        "CL" -> hexToName as LinkedHashMap<String, String>
+        "P"  -> patternCodeToName
+        "S"  -> sizeOptions
+        "F"  -> formalitySingleToName
+        "SE" -> seasonSingleToName
+        "W"  -> washOptions
+        "D"  -> dryOptions
+        "I"  -> ironOptions
+        "B"  -> yesNoOptions
+        "C"  -> yesNoOptions
         else -> null
     }
+
+    // ── Speech launcher ───────────────────────────────────────────────────────
 
     private val speechLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -174,30 +237,37 @@ class NfcFragment : Fragment() {
                 ?.firstOrNull()
             if (!spoken.isNullOrEmpty()) {
                 etStepInput.setText(spoken)
-                etStepInput.announceForAccessibility("You said: $spoken")
+                etStepInput.announceForAccessibility("${getString(R.string.you_said)} $spoken")
             }
         }
     }
+
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
         val view = inflater.inflate(R.layout.fragment_nfc, container, false)
 
-        tvStatus        = view.findViewById(R.id.tv_status)
-        tvStepIndicator = view.findViewById(R.id.tv_step_indicator)
-        tvQuestion      = view.findViewById(R.id.tv_question)
-        etStepInput     = view.findViewById(R.id.et_step_input)
-        tvStepError     = view.findViewById(R.id.tv_step_error)
-        btnShowOptions  = view.findViewById(R.id.btn_show_options)
-        btnMic          = view.findViewById(R.id.btn_mic)
-        btnCamera       = view.findViewById(R.id.btn_camera)
-        btnBack         = view.findViewById(R.id.btn_back)
-        btnSkip         = view.findViewById(R.id.btn_skip)
-        btnNext         = view.findViewById(R.id.btn_next)
-        layoutSummary   = view.findViewById(R.id.layout_summary)
-        tvSummary       = view.findViewById(R.id.tv_summary)
-        btnWrite        = view.findViewById(R.id.btn_write)
+        tvStatus             = view.findViewById(R.id.tv_status)
+        tvStepIndicator      = view.findViewById(R.id.tv_step_indicator)
+        tvQuestion           = view.findViewById(R.id.tv_question)
+        layoutFreeText       = view.findViewById(R.id.layout_free_text)
+        etStepInput          = view.findViewById(R.id.et_step_input)
+        btnMic               = view.findViewById(R.id.btn_mic)
+        btnCamera            = view.findViewById(R.id.btn_camera)
+        scrollOptions        = view.findViewById(R.id.scroll_options)
+        optionsContainer     = view.findViewById(R.id.options_container)
+        layoutCustomSize     = view.findViewById(R.id.layout_custom_size)
+        etCustomSize         = view.findViewById(R.id.et_custom_size)
+        btnConfirmCustomSize = view.findViewById(R.id.btn_confirm_custom_size)
+        tvStepError          = view.findViewById(R.id.tv_step_error)
+        btnBack              = view.findViewById(R.id.btn_back)
+        btnSkip              = view.findViewById(R.id.btn_skip)
+        btnNext              = view.findViewById(R.id.btn_next)
+        layoutSummary        = view.findViewById(R.id.layout_summary)
+        tvSummary            = view.findViewById(R.id.tv_summary)
+        btnWrite             = view.findViewById(R.id.btn_write)
 
         nfcAdapter = NfcAdapter.getDefaultAdapter(requireContext())
         when {
@@ -208,6 +278,7 @@ class NfcFragment : Fragment() {
 
         showStep(0)
 
+        // Pre-fill from camera vision results if available.
         pendingVisionResults?.let { results ->
             results.forEach { (key, value) ->
                 if (steps.any { it.key == key }) answers[key] = value
@@ -218,12 +289,24 @@ class NfcFragment : Fragment() {
             showStep(0)
         }
 
+        // Next / Review button — only used for free-text steps.
+        // Enumerated steps advance automatically on option tap.
         btnNext.setOnClickListener {
+            val key = steps[currentStep].key
+
+            if (key in enumeratedKeys) {
+                // On enumerated steps, Next advances without requiring a selection
+                // (user may want to skip after looking at options).
+                answers.remove(key)
+                clearStepError()
+                advance()
+                return@setOnClickListener
+            }
+
             val input = etStepInput.text.toString().trim()
-            val key   = steps[currentStep].key
 
             if (key == "N" && input.isEmpty()) {
-                showStepError(getString(R.string.write_error_name_required), key)
+                showStepError(getString(R.string.write_error_name_required))
                 return@setOnClickListener
             }
 
@@ -234,14 +317,7 @@ class NfcFragment : Fragment() {
                 return@setOnClickListener
             }
 
-            val processed = if (key in interpretedKeys) interpret(key, input) else input
-
-            if (key in validatedKeys && key != "S" && processed.equals(input, ignoreCase = true)) {
-                showStepError("${getString(R.string.write_error_not_recognized)} ${rejectionMessage(key)}", key)
-                return@setOnClickListener
-            }
-
-            answers[key] = processed
+            answers[key] = input
             clearStepError()
             advance()
         }
@@ -258,6 +334,7 @@ class NfcFragment : Fragment() {
             val key = steps[currentStep].key
             answers.remove(key)
             etStepInput.setText("")
+            etCustomSize.setText("")
             clearStepError()
             advance()
         }
@@ -274,6 +351,21 @@ class NfcFragment : Fragment() {
 
         btnCamera.setOnClickListener {
             (activity as? MainActivity)?.openCamera(CameraFragment.Source.WRITE)
+        }
+
+        // Custom size confirmation — interprets the typed value and stores it.
+        btnConfirmCustomSize.setOnClickListener {
+            val raw = etCustomSize.text.toString().trim()
+            if (raw.isEmpty()) {
+                showStepError(getString(R.string.write_error_size_empty))
+                return@setOnClickListener
+            }
+            val interpreted = interpretSize(raw, raw.lowercase())
+            answers["S"] = interpreted
+            clearStepError()
+            layoutCustomSize.visibility = View.GONE
+            highlightSelectedOption("S", interpreted)
+            advance()
         }
 
         btnWrite.setOnClickListener {
@@ -303,6 +395,123 @@ class NfcFragment : Fragment() {
         return view
     }
 
+    // ── Step display ──────────────────────────────────────────────────────────
+
+    /**
+     * Renders the correct UI for the given step index.
+     * Enumerated steps show a scrollable button list.
+     * Free-text steps show the EditText + mic button.
+     */
+    private fun showStep(index: Int) {
+        val step = steps[index]
+        tvStepIndicator.text = getString(R.string.step_indicator, index + 1, steps.size)
+        tvQuestion.text      = step.question
+
+        clearStepError()
+        layoutSummary.visibility = View.GONE
+        btnWrite.visibility      = View.GONE
+        layoutCustomSize.visibility = View.GONE
+
+        btnNext.text = if (index == steps.size - 1) getString(R.string.btn_review)
+        else getString(R.string.btn_next)
+
+        btnBack.isEnabled = index > 0
+        btnBack.alpha     = if (index > 0) 1f else 0.4f
+
+        val canSkip = step.key != "N"
+        btnSkip.isEnabled  = canSkip
+        btnSkip.alpha      = if (canSkip) 1f else 0.4f
+        btnSkip.visibility = if (canSkip) View.VISIBLE else View.INVISIBLE
+
+        val options = optionsForKey(step.key)
+
+        if (options != null) {
+            // Enumerated step: show option buttons, hide free-text input.
+            layoutFreeText.visibility = View.GONE
+            scrollOptions.visibility  = View.VISIBLE
+            buildOptionButtons(step.key, options)
+        } else {
+            // Free-text step: show EditText + mic, hide option buttons.
+            layoutFreeText.visibility = View.VISIBLE
+            scrollOptions.visibility  = View.GONE
+            etStepInput.hint = step.hint
+            val stored = answers[step.key] ?: ""
+            etStepInput.setText(stored)
+            etStepInput.requestFocus()
+        }
+
+        tvQuestion.announceForAccessibility(
+            getString(R.string.step_indicator, index + 1, steps.size) + ". ${step.question}"
+        )
+        updateStatus(getString(R.string.write_status_answer))
+    }
+
+    /**
+     * Inflates one button per option into [optionsContainer].
+     * The currently selected value (if any) is highlighted.
+     * Tapping a button stores the code and advances to the next step,
+     * except for the "CUSTOM" sentinel on the Size step which reveals
+     * the custom size input field instead.
+     */
+    private fun buildOptionButtons(key: String, options: LinkedHashMap<String, String>) {
+        optionsContainer.removeAllViews()
+        val selectedCode = answers[key]
+
+        for ((code, label) in options) {
+            val btn = Button(requireContext()).apply {
+                text = label
+                textSize = 17f
+                isAllCaps = false
+                val params = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { setMargins(0, 0, 0, 12) }
+                layoutParams = params
+                minHeight = (64 * resources.displayMetrics.density).toInt()
+                contentDescription = label
+
+                // Highlight the currently selected option.
+                if (code == selectedCode) {
+                    setTypeface(typeface, Typeface.BOLD)
+                    contentDescription = "$label. ${getString(R.string.option_selected)}"
+                }
+
+                setOnClickListener {
+                    if (key == "S" && code == "CUSTOM") {
+                        // Reveal custom size input — don't advance yet.
+                        layoutCustomSize.visibility = View.VISIBLE
+                        etCustomSize.requestFocus()
+                        etCustomSize.announceForAccessibility(getString(R.string.size_custom_prompt))
+                    } else {
+                        answers[key] = code
+                        clearStepError()
+                        advance()
+                    }
+                }
+            }
+            optionsContainer.addView(btn)
+        }
+    }
+
+    /**
+     * After a custom size is confirmed, highlights the matching standard button
+     * if the interpreted code happens to be a standard letter size, then advances.
+     * Called before [advance] in the custom size confirm handler.
+     */
+    private fun highlightSelectedOption(key: String, code: String) {
+        for (i in 0 until optionsContainer.childCount) {
+            val btn = optionsContainer.getChildAt(i) as? Button ?: continue
+            val btnCode = (optionsForKey(key) ?: continue).entries
+                .firstOrNull { it.value == btn.text }?.key ?: continue
+            if (btnCode == code) {
+                btn.setTypeface(btn.typeface, Typeface.BOLD)
+                btn.contentDescription = "${btn.text}. ${getString(R.string.option_selected)}"
+            }
+        }
+    }
+
+    // ── Navigation ────────────────────────────────────────────────────────────
+
     private fun advance() {
         if (currentStep < steps.size - 1) {
             currentStep++
@@ -312,42 +521,21 @@ class NfcFragment : Fragment() {
         }
     }
 
-    private fun showStepError(message: String, key: String = "") {
+    // ── Error display ─────────────────────────────────────────────────────────
+
+    private fun showStepError(message: String) {
         tvStepError.text = message
         tvStepError.visibility = View.VISIBLE
         tvStepError.announceForAccessibility(message)
-
-        val fullOptions = if (key.isNotEmpty()) fullOptionsList(key) else null
-        if (fullOptions != null) {
-            btnShowOptions.visibility = View.VISIBLE
-            btnShowOptions.text = getString(R.string.btn_show_options)
-            btnShowOptions.contentDescription = getString(R.string.btn_show_options_description)
-            var expanded = false
-            btnShowOptions.setOnClickListener {
-                expanded = !expanded
-                if (expanded) {
-                    btnShowOptions.text = fullOptions
-                    btnShowOptions.contentDescription = "$fullOptions. Double tap to collapse."
-                    btnShowOptions.announceForAccessibility(fullOptions)
-                } else {
-                    btnShowOptions.text = getString(R.string.btn_show_options)
-                    btnShowOptions.contentDescription = getString(R.string.btn_show_options_description)
-                    btnShowOptions.announceForAccessibility(getString(R.string.options_collapsed))
-                }
-            }
-        } else {
-            btnShowOptions.visibility = View.GONE
-        }
-
         etStepInput.requestFocus()
     }
 
     private fun clearStepError() {
         tvStepError.text = ""
         tvStepError.visibility = View.GONE
-        btnShowOptions.visibility = View.GONE
-        btnShowOptions.text = getString(R.string.btn_show_options)
     }
+
+    // ── NFC tag handling ──────────────────────────────────────────────────────
 
     fun onTagDiscovered(tag: Tag) {
         when {
@@ -428,304 +616,30 @@ class NfcFragment : Fragment() {
         }
     }
 
-    // ── Interpreter (logic unchanged, no string changes needed) ──────────────
-
-    private fun interpret(key: String, input: String): String {
-        val s = input.lowercase()
-            .replace("degrees", "").replace("degree",  "")
-            .replace("don't", "do not").replace("dont", "do not")
-            .replace("can't", "cannot").replace("cant", "cannot")
-            .replace("cannot", "can not")
-            .replace("won't", "will not").replace("wont", "will not")
-            .replace("shouldn't", "should not").replace("shouldnt", "should not")
-            .replace("doesn't", "does not").replace("doesnt", "does not")
-            .replace("isn't", "is not").replace("isnt", "is not")
-            .replace("never", "not").trim()
-
-        fun hasWord(word: String): Boolean =
-            Regex("\\b${Regex.escape(word)}\\b").containsMatchIn(s)
-
-        val isNegated = hasWord("no") || hasWord("not")
-
-        return when (key) {
-            "T"  -> interpretType(input, s)
-            "CL" -> interpretColor(input, s)
-            "P"  -> interpretPattern(input, s)
-            "S"  -> interpretSize(input, s)
-            "F"  -> interpretFormality(input, s)
-            "SE" -> interpretSeason(input, s)
-            "W"  -> when {
-                isNegated && ("wash" in s || "water" in s) -> "N"
-                "hand" in s                                -> "H"
-                "60" in s || "sixty"  in s                 -> "60"
-                "40" in s || "forty"  in s                 -> "40"
-                "30" in s || "thirty" in s                 -> "30"
-                else -> input
-            }
-            "D"  -> when {
-                isNegated && "dry" in s -> "N"
-                "tumble" in s           -> "T"
-                "flat"   in s           -> "F"
-                "air"    in s           -> "A"
-                else -> input
-            }
-            "I"  -> when {
-                isNegated                   -> "0"
-                "high" in s                 -> "3"
-                "medium" in s || "med" in s -> "2"
-                "low" in s                  -> "1"
-                else -> input
-            }
-            "B"  -> when {
-                hasWord("yes") || "allow" in s || hasWord("ok") -> "1"
-                isNegated                                       -> "0"
-                else -> input
-            }
-            "C"  -> when {
-                hasWord("yes") || hasWord("ok") -> "1"
-                isNegated                       -> "0"
-                else -> input
-            }
-            else -> input
-        }
-    }
-
-    private fun interpretColor(rawInput: String, s: String): String = when {
-        "black"  in s                -> "212121"
-        "white"  in s                -> "F5F5F5"
-        "grey"   in s || "gray" in s -> "9E9E9E"
-        "navy"   in s                -> "1A237E"
-        "blue"   in s                -> "2196F3"
-        "red"    in s                -> "F44336"
-        "green"  in s                -> "4CAF50"
-        "yellow" in s                -> "FFEB3B"
-        "orange" in s                -> "FF9800"
-        "pink"   in s                -> "E91E63"
-        "purple" in s                -> "9C27B0"
-        "brown"  in s                -> "795548"
-        "beige"  in s                -> "D7CCC8"
-        "multi"  in s                -> "FF5722"
-        else -> rawInput
-    }
-
-    private fun interpretType(rawInput: String, s: String): String = when {
-        "t-shirt" in s || "tshirt" in s || "tee" in s       -> "TS"
-        "shirt"     in s                                     -> "SH"
-        "jacket"    in s                                     -> "JK"
-        "coat"      in s                                     -> "CT"
-        "sweater"   in s || "jumper" in s || "pullover" in s -> "SW"
-        "hoodie"    in s                                     -> "HD"
-        "blazer"    in s                                     -> "BZ"
-        "suit"      in s                                     -> "SU"
-        "vest"      in s                                     -> "VS"
-        "dress"     in s                                     -> "DR"
-        "underwear" in s                                     -> "UW"
-        "trouser"   in s || "pants" in s                     -> "PT"
-        "jeans"     in s                                     -> "JN"
-        "shorts"    in s                                     -> "ST"
-        "skirt"     in s                                     -> "SK"
-        "sock"      in s                                     -> "SC"
-        else -> rawInput
-    }
-
-    private fun interpretPattern(rawInput: String, s: String): String = when {
-        "plain"   in s || "solid"   in s             -> "P"
-        "stripe"  in s                               -> "ST"
-        "check"   in s                               -> "CH"
-        "plaid"   in s || "tartan"  in s             -> "PL"
-        "floral"  in s || "flower"  in s             -> "FL"
-        "polka"   in s || "dot"     in s             -> "DT"
-        "graphic" in s || "print"   in s             -> "GR"
-        "camo"    in s                               -> "CM"
-        "animal"  in s || "leopard" in s || "zebra" in s -> "AN"
-        else -> rawInput
-    }
-
-    private fun interpretFormality(rawInput: String, s: String): String {
-        val hasSmart    = "smart"    in s
-        val hasBusiness = "business" in s
-        val hasCasual   = "casual"   in s
-        val hasFormal   = "formal"   in s
-        val hasSport    = "sport"    in s || "athletic" in s || "gym" in s
-        val hasLounge   = "lounge"   in s || "sleep" in s || "pyjama" in s || "pajama" in s
-        return when {
-            hasSmart && hasCasual    -> "SC"
-            hasBusiness && hasCasual -> "BC"
-            hasSmart && hasFormal    -> "SF"
-            hasCasual                -> "C"
-            hasBusiness              -> "B"
-            hasFormal                -> "F"
-            hasSport                 -> "S"
-            hasLounge                -> "L"
-            else -> rawInput
-        }
-    }
-
-    private fun interpretSeason(rawInput: String, s: String): String {
-        if ("all" in s || "year-round" in s || "year round" in s || "any season" in s) return "AS"
-        val mentions = mutableListOf<String>()
-        val pattern = Regex("\\b(spring|summer|autumn|fall|winter)\\b")
-        for (m in pattern.findAll(s)) {
-            val code = when (m.value) {
-                "spring"         -> "SP"
-                "summer"         -> "SU"
-                "autumn", "fall" -> "A"
-                "winter"         -> "W"
-                else             -> continue
-            }
-            if (code !in mentions) mentions.add(code)
-        }
-        return if (mentions.isEmpty()) rawInput else mentions.joinToString("")
-    }
-
-    private fun interpretSize(rawInput: String, normalized: String): String {
-        val s = normalized.replace("-", " ").replace(",", " ")
-        val oneSizePatterns = listOf("one size", "free size", "onesize", "freesize")
-        if (oneSizePatterns.any { it in s }) return "OS"
-        if (Regex("\\bos\\b").containsMatchIn(s)) return "OS"
-        val withDigits = wordsToDigits(s)
-        Regex("(\\d{2,3})\\s*(?:/|x|by)\\s*(\\d{2,3})")
-            .find(withDigits)?.let { return "${it.groupValues[1]}/${it.groupValues[2]}" }
-        val letterPatterns = listOf(
-            Regex("\\bxxxl\\b|triple\\s*(?:extra\\s*)?large|3xl") to "XXXL",
-            Regex("\\bxxl\\b|double\\s*(?:extra\\s*)?large|2xl")  to "XXL",
-            Regex("\\bxl\\b|extra\\s*large")                      to "XL",
-            Regex("\\bxs\\b|extra\\s*small")                      to "XS",
-            Regex("\\bl\\b|\\blarge\\b")                          to "L",
-            Regex("\\bm\\b|\\bmedium\\b")                         to "M",
-            Regex("\\bs\\b|\\bsmall\\b")                          to "S"
-        )
-        for ((pattern, code) in letterPatterns) {
-            if (pattern.containsMatchIn(withDigits)) return code
-        }
-        Regex("\\b(\\d{2,3})\\b").find(withDigits)?.let { return it.groupValues[1] }
-        return rawInput
-    }
-
-    private fun wordsToDigits(input: String): String {
-        val ones = mapOf(
-            "zero" to 0, "one" to 1, "two" to 2, "three" to 3, "four" to 4,
-            "five" to 5, "six" to 6, "seven" to 7, "eight" to 8, "nine" to 9,
-            "ten" to 10, "eleven" to 11, "twelve" to 12, "thirteen" to 13,
-            "fourteen" to 14, "fifteen" to 15, "sixteen" to 16,
-            "seventeen" to 17, "eighteen" to 18, "nineteen" to 19
-        )
-        val tens = mapOf(
-            "twenty" to 20, "thirty" to 30, "forty" to 40, "fifty" to 50,
-            "sixty" to 60, "seventy" to 70, "eighty" to 80, "ninety" to 90
-        )
-        val tokens = input.split(Regex("\\s+")).toMutableList()
-        val out = mutableListOf<String>()
-        var i = 0
-        while (i < tokens.size) {
-            val t = tokens[i]
-            val tenVal = tens[t]
-            if (tenVal != null) {
-                val next    = tokens.getOrNull(i + 1)
-                val onesVal = ones[next]
-                if (onesVal != null && onesVal in 1..9) {
-                    out.add((tenVal + onesVal).toString()); i += 2; continue
-                }
-                out.add(tenVal.toString()); i++; continue
-            }
-            val onesValStandalone = ones[t]
-            if (onesValStandalone != null) {
-                out.add(onesValStandalone.toString()); i++; continue
-            }
-            out.add(t); i++
-        }
-        return out.joinToString(" ")
-    }
-
-    private fun decode(key: String, value: String): String = when (key) {
-        "T"  -> typeCodeToName[value.uppercase()] ?: value
-        "CL" -> hexToName[value.uppercase()] ?: value
-        "P"  -> patternCodeToName[value.uppercase()] ?: value
-        "F"  -> formalityComboToName[value.uppercase()]
-            ?: formalitySingleToName[value.uppercase()] ?: value
-        "SE" -> {
-            val v = value.uppercase()
-            seasonSingleToName[v] ?: run {
-                val parts = mutableListOf<String>()
-                var remaining = v
-                while (remaining.isNotEmpty()) {
-                    val match = seasonCodesByLength.firstOrNull {
-                        remaining.startsWith(it)
-                    } ?: return@run value
-                    parts.add(seasonSingleToName[match] ?: return@run value)
-                    remaining = remaining.removePrefix(match)
-                }
-                parts.joinToString("/")
-            }
-        }
-        "S"  -> if (value == "OS") getString(R.string.one_size) else value
-        "W"  -> when (value) {
-            "30" -> getString(R.string.wash_30); "40" -> getString(R.string.wash_40)
-            "60" -> getString(R.string.wash_60); "H"  -> getString(R.string.wash_hand)
-            "N"  -> getString(R.string.wash_no); else -> value
-        }
-        "D"  -> when (value) {
-            "A" -> getString(R.string.dry_air);   "T" -> getString(R.string.dry_tumble)
-            "F" -> getString(R.string.dry_flat);  "N" -> getString(R.string.dry_no)
-            else -> value
-        }
-        "I"  -> when (value) {
-            "0" -> getString(R.string.iron_no);   "1" -> getString(R.string.iron_low)
-            "2" -> getString(R.string.iron_medium); "3" -> getString(R.string.iron_high)
-            else -> value
-        }
-        "B"  -> when (value) { "1" -> getString(R.string.yes); "0" -> getString(R.string.no); else -> value }
-        "C"  -> when (value) { "1" -> getString(R.string.yes); "0" -> getString(R.string.no); else -> value }
-        else -> value
-    }
-
-    private fun showStep(index: Int) {
-        val step = steps[index]
-        tvStepIndicator.text = getString(R.string.step_indicator, index + 1, steps.size)
-        tvQuestion.text      = step.question
-        etStepInput.hint     = step.hint
-
-        val stored = answers[step.key] ?: ""
-        etStepInput.setText(
-            if (step.key in interpretedKeys && stored.isNotEmpty())
-                decode(step.key, stored)
-            else stored
-        )
-        etStepInput.requestFocus()
-        clearStepError()
-
-        layoutSummary.visibility = View.GONE
-        btnWrite.visibility      = View.GONE
-        btnNext.text = if (index == steps.size - 1) getString(R.string.btn_review)
-        else getString(R.string.btn_next)
-
-        btnBack.isEnabled = index > 0
-        btnBack.alpha     = if (index > 0) 1f else 0.4f
-
-        val canSkip = step.key != "N"
-        btnSkip.isEnabled  = canSkip
-        btnSkip.alpha      = if (canSkip) 1f else 0.4f
-        btnSkip.visibility = if (canSkip) View.VISIBLE else View.INVISIBLE
-
-        tvQuestion.announceForAccessibility(
-            getString(R.string.step_indicator, index + 1, steps.size) + ". ${step.question}"
-        )
-        updateStatus(getString(R.string.write_status_answer))
-    }
+    // ── Summary ───────────────────────────────────────────────────────────────
 
     private fun showSummary() {
         layoutSummary.visibility = View.VISIBLE
         btnWrite.visibility      = View.VISIBLE
+        scrollOptions.visibility = View.GONE
+        layoutFreeText.visibility = View.GONE
         btnNext.text             = getString(R.string.btn_next)
 
         val labelMap = mapOf(
-            "N" to getString(R.string.field_item),      "T"  to getString(R.string.field_type),
-            "CL" to getString(R.string.field_color),    "P"  to getString(R.string.field_pattern),
-            "S"  to getString(R.string.field_size),     "F"  to getString(R.string.field_formality),
-            "SE" to getString(R.string.field_season),   "M"  to getString(R.string.field_material),
-            "W"  to getString(R.string.field_wash),     "D"  to getString(R.string.field_drying),
-            "I"  to getString(R.string.field_ironing),  "B"  to getString(R.string.field_bleaching),
-            "C"  to getString(R.string.field_dry_clean),"X"  to getString(R.string.field_notes)
+            "N"  to getString(R.string.field_item),
+            "T"  to getString(R.string.field_type),
+            "CL" to getString(R.string.field_color),
+            "P"  to getString(R.string.field_pattern),
+            "S"  to getString(R.string.field_size),
+            "F"  to getString(R.string.field_formality),
+            "SE" to getString(R.string.field_season),
+            "M"  to getString(R.string.field_material),
+            "W"  to getString(R.string.field_wash),
+            "D"  to getString(R.string.field_drying),
+            "I"  to getString(R.string.field_ironing),
+            "B"  to getString(R.string.field_bleaching),
+            "C"  to getString(R.string.field_dry_clean),
+            "X"  to getString(R.string.field_notes)
         )
 
         val summary = steps
@@ -738,12 +652,14 @@ class NfcFragment : Fragment() {
         updateStatus(getString(R.string.write_status_review))
     }
 
+    // ── Tag write ─────────────────────────────────────────────────────────────
+
     private fun writeTag(tag: Tag) {
         try {
-            val encoded     = encodeTagData()
-            val record      = NdefRecord.createTextRecord("en", encoded)
-            val ndefMessage = NdefMessage(arrayOf(record))
-            val ndef        = Ndef.get(tag)
+            val encoded        = encodeTagData()
+            val record         = NdefRecord.createTextRecord("en", encoded)
+            val ndefMessage    = NdefMessage(arrayOf(record))
+            val ndef           = Ndef.get(tag)
             val ndefFormatable = NdefFormatable.get(tag)
 
             when {
@@ -788,6 +704,113 @@ class NfcFragment : Fragment() {
     private fun encodeTagData(): String = steps
         .filter { answers[it.key]?.isNotEmpty() == true }
         .joinToString("|") { "${it.key}:${answers[it.key]}" }
+
+    // ── Decode (for summary display) ──────────────────────────────────────────
+
+    private fun decode(key: String, value: String): String = when (key) {
+        "T"  -> typeCodeToName[value.uppercase()] ?: value
+        "CL" -> hexToName[value.uppercase()] ?: value
+        "P"  -> patternCodeToName[value.uppercase()] ?: value
+        "F"  -> formalityComboToName[value.uppercase()]
+            ?: formalitySingleToName[value.uppercase()] ?: value
+        "SE" -> {
+            val v = value.uppercase()
+            seasonSingleToName[v] ?: run {
+                val parts     = mutableListOf<String>()
+                var remaining = v
+                while (remaining.isNotEmpty()) {
+                    val match = seasonCodesByLength.firstOrNull {
+                        remaining.startsWith(it)
+                    } ?: return@run value
+                    parts.add(seasonSingleToName[match] ?: return@run value)
+                    remaining = remaining.removePrefix(match)
+                }
+                parts.joinToString("/")
+            }
+        }
+        "S"  -> if (value == "OS") getString(R.string.one_size) else value
+        "W"  -> when (value) {
+            "30" -> getString(R.string.wash_30); "40" -> getString(R.string.wash_40)
+            "60" -> getString(R.string.wash_60); "H"  -> getString(R.string.wash_hand)
+            "N"  -> getString(R.string.wash_no); else -> value
+        }
+        "D"  -> when (value) {
+            "A" -> getString(R.string.dry_air);    "T" -> getString(R.string.dry_tumble)
+            "F" -> getString(R.string.dry_flat);   "N" -> getString(R.string.dry_no)
+            else -> value
+        }
+        "I"  -> when (value) {
+            "0" -> getString(R.string.iron_no);     "1" -> getString(R.string.iron_low)
+            "2" -> getString(R.string.iron_medium); "3" -> getString(R.string.iron_high)
+            else -> value
+        }
+        "B"  -> when (value) { "1" -> getString(R.string.yes); "0" -> getString(R.string.no); else -> value }
+        "C"  -> when (value) { "1" -> getString(R.string.yes); "0" -> getString(R.string.no); else -> value }
+        else -> value
+    }
+
+    // ── Size interpreter (kept for pendingVisionResults pre-fill + custom input) ──
+
+    private fun interpretSize(rawInput: String, normalized: String): String {
+        val s = normalized.replace("-", " ").replace(",", " ")
+        val oneSizePatterns = listOf("one size", "free size", "onesize", "freesize")
+        if (oneSizePatterns.any { it in s }) return "OS"
+        if (Regex("\\bos\\b").containsMatchIn(s)) return "OS"
+        val withDigits = wordsToDigits(s)
+        Regex("(\\d{2,3})\\s*(?:/|x|by)\\s*(\\d{2,3})")
+            .find(withDigits)?.let { return "${it.groupValues[1]}/${it.groupValues[2]}" }
+        val letterPatterns = listOf(
+            Regex("\\bxxxl\\b|triple\\s*(?:extra\\s*)?large|3xl") to "XXXL",
+            Regex("\\bxxl\\b|double\\s*(?:extra\\s*)?large|2xl")  to "XXL",
+            Regex("\\bxl\\b|extra\\s*large")                      to "XL",
+            Regex("\\bxs\\b|extra\\s*small")                      to "XS",
+            Regex("\\bl\\b|\\blarge\\b")                          to "L",
+            Regex("\\bm\\b|\\bmedium\\b")                         to "M",
+            Regex("\\bs\\b|\\bsmall\\b")                          to "S"
+        )
+        for ((pattern, code) in letterPatterns) {
+            if (pattern.containsMatchIn(withDigits)) return code
+        }
+        Regex("\\b(\\d{2,3})\\b").find(withDigits)?.let { return it.groupValues[1] }
+        return rawInput
+    }
+
+    private fun wordsToDigits(input: String): String {
+        val ones = mapOf(
+            "zero" to 0, "one" to 1, "two" to 2, "three" to 3, "four" to 4,
+            "five" to 5, "six" to 6, "seven" to 7, "eight" to 8, "nine" to 9,
+            "ten" to 10, "eleven" to 11, "twelve" to 12, "thirteen" to 13,
+            "fourteen" to 14, "fifteen" to 15, "sixteen" to 16,
+            "seventeen" to 17, "eighteen" to 18, "nineteen" to 19
+        )
+        val tens = mapOf(
+            "twenty" to 20, "thirty" to 30, "forty" to 40, "fifty" to 50,
+            "sixty" to 60, "seventy" to 70, "eighty" to 80, "ninety" to 90
+        )
+        val tokens = input.split(Regex("\\s+")).toMutableList()
+        val out    = mutableListOf<String>()
+        var i      = 0
+        while (i < tokens.size) {
+            val t      = tokens[i]
+            val tenVal = tens[t]
+            if (tenVal != null) {
+                val next    = tokens.getOrNull(i + 1)
+                val onesVal = ones[next]
+                if (onesVal != null && onesVal in 1..9) {
+                    out.add((tenVal + onesVal).toString()); i += 2; continue
+                }
+                out.add(tenVal.toString()); i++; continue
+            }
+            val onesValStandalone = ones[t]
+            if (onesValStandalone != null) {
+                out.add(onesValStandalone.toString()); i++; continue
+            }
+            out.add(t); i++
+        }
+        return out.joinToString(" ")
+    }
+
+    // ── Status bar ────────────────────────────────────────────────────────────
 
     private fun updateStatus(message: String) {
         tvStatus.text = message
