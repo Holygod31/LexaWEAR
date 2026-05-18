@@ -309,4 +309,85 @@
     <string name="step_h_dry_clean">Choose Yes or No</string>
     <string name="step_h_notes">e.g. Goes well with black pants</string>
 
+    <!-- Camera fragment -->
+    <string name="camera_permission_required">Camera permission is required for this feature.</string>
+    <string name="camera_mode_care_label">Shot 2: Care Label</string>
+    <string name="camera_mode_care_label_description">Care label scanning mode</string>
+    <string name="camera_overlay_care_label">Point camera at the care label inside the garment</string>
+    <string name="camera_btn_clothing">Clothing</string>
+    <string name="camera_btn_clothing_description">Switch back to clothing scanning mode</string>
+    <string name="camera_capture_care_description">Capture care label image</string>
+    <string name="camera_mode_clothing">Shot 1: Clothing</string>
+    <string name="camera_mode_clothing_description">Clothing scanning mode</string>
+    <string name="camera_overlay_clothing">Point camera at the clothing item</string>
+    <string name="camera_btn_care_label">Care\nLabel</string>
+    <string name="camera_btn_care_label_description">Switch to care label scanning mode</string>
+    <string name="camera_capture_clothing_description">Capture clothing image and analyze</string>
+    <string name="camera_error">Camera error: %s</string>
+    <string name="camera_capturing">Capturing…</string>
+    <string name="camera_capture_failed">Capture failed: %s</string>
+    <string name="camera_analyzing">Analyzing…</string>
+    <string name="camera_nothing_recognized">Nothing recognized. Try again or adjust the angle.</string>
+    <string name="camera_nothing_recognized_accessibility">Nothing recognized. Try adjusting the angle.</string>
+    <string name="camera_detected_status">%1$s detected (%2$d%% confidence). %3$s</string>
+    <string name="camera_detected_accessibility">%1$s detected. %2$s</string>
+    <string name="camera_mode_label_care">Care label</string>
+    <string name="camera_mode_label_clothing">Clothing</string>
+    <string name="camera_btn_use_results">Use Results</string>
+    <string name="camera_btn_use_results_description">Use these results and fill in the fields. Double tap to confirm.</string>
+    <string name="camera_btn_retake">Retake</string>
+    <string name="camera_btn_retake_description">Retake the photo</string>
+    <string name="camera_ready">Ready. Tap Capture when ready.</string>
+    <string name="camera_btn_capture">📷  Capture</string>
+    <string name="camera_btn_capture_description">Capture image and analyze clothing</string>
+
+    <!-- Vision analyzer -->
+    <string name="vision_analyzing">Analyzing…</string>
+
+    <!-- Tutorial — UI chrome -->
+    <string name="tutorial_got_it">Got it</string>
+    <string name="tutorial_skip">Skip</string>
+    <string name="tutorial_got_it_description">Got it. Double tap to go to next step.</string>
+    <string name="tutorial_skip_description">Skip this step. Double tap to continue.</string>
+    <string name="tutorial_button_below"> button below.</string>
+    <string name="tutorial_complete_title">You\'re all set!</string>
+    <string name="tutorial_complete_body">You now know the full layout of LexaWEAR. Replay this tutorial anytime from the Settings button at the top.</string>
+    <string name="tutorial_complete_btn">Start using LexaWEAR</string>
+    <string name="tutorial_complete_btn_description">Start using LexaWEAR. Double tap to close tutorial.</string>
+    <string name="tutorial_complete_announcement">Tutorial complete. You\'re all set! You can replay this tutorial anytime from the Settings button.</string>
+
+    <!-- Tutorial — step titles -->
+    <string name="tutorial_title_1">1 of 15 — Care Tab</string>
+    <string name="tutorial_title_2">2 of 15 — Add to Wardrobe</string>
+    <string name="tutorial_title_3">3 of 15 — Write Tab</string>
+    <string name="tutorial_title_4">4 of 15 — Next</string>
+    <string name="tutorial_title_5">5 of 15 — Skip</string>
+    <string name="tutorial_title_6">6 of 15 — Back</string>
+    <string name="tutorial_title_7">7 of 15 — Camera</string>
+    <string name="tutorial_title_8">8 of 15 — Editing Tags</string>
+    <string name="tutorial_title_9">9 of 15 — Wardrobe Tab</string>
+    <string name="tutorial_title_10">10 of 15 — Filters</string>
+    <string name="tutorial_title_11">11 of 15 — Voice Filter</string>
+    <string name="tutorial_title_12">12 of 15 — Filter Arrows</string>
+    <string name="tutorial_title_13">13 of 15 — Apply Filters</string>
+    <string name="tutorial_title_14">14 of 15 — Clear Filters</string>
+    <string name="tutorial_title_15">15 of 15 — Done</string>
+
+    <!-- Tutorial — step descriptions -->
+    <string name="tutorial_desc_1">This is the Care tab. Hold your phone to a clothing tag to read its care instructions. You can also tap the Scan Care Label button to read a label with the camera. Tap Got it to continue.</string>
+    <string name="tutorial_desc_2">After scanning a tag the Add to Wardrobe button appears at the bottom. Find it and tap it.</string>
+    <string name="tutorial_desc_3">This is the Write tab. Choose answers about a clothing item then hold your phone to a blank NFC tag to save it. You can also tap the camera button to pre-fill fields automatically. Tap Got it to continue.</string>
+    <string name="tutorial_desc_4">Find the Next button and tap it to confirm your answer and move to the next question.</string>
+    <string name="tutorial_desc_5">Find the Skip button and tap it to leave a question blank and move on.</string>
+    <string name="tutorial_desc_6">Find the Back button and tap it to return to the previous question.</string>
+    <string name="tutorial_desc_7">Find the camera button and tap it to scan your clothing item and pre-fill fields automatically.</string>
+    <string name="tutorial_desc_8">Tip: scan an existing LexaWEAR tag on this screen to load and edit it. Tap Got it to continue.</string>
+    <string name="tutorial_desc_9">This is your Wardrobe. Tagged clothing items appear here. Find the Scan Tag button at the bottom and tap it.</string>
+    <string name="tutorial_desc_10">Find the Filters button and tap it to open the filter screen.</string>
+    <string name="tutorial_desc_11">Find the voice filter microphone and tap it to filter your wardrobe by speaking.</string>
+    <string name="tutorial_desc_12">This is the Filter screen. Arrow buttons cycle through options. Find any Next arrow and tap it.</string>
+    <string name="tutorial_desc_13">Find the Apply button and tap it to apply your filters.</string>
+    <string name="tutorial_desc_14">Find the Clear button and tap it to reset all filters.</string>
+    <string name="tutorial_desc_15">You have completed the tutorial. Tap Got it to start using LexaWEAR.</string>
+
 </resources>
