@@ -1,4 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
+
+<!--
+    item_wardrobe.xml — Single row layout for the WardrobeFragment ListView.
+
+    Structure:
+      LinearLayout (horizontal, full width)
+        ├─ View (view_color_dot)         ← 24dp circle filled with item's colour hex
+        └─ LinearLayout (vertical)       ← text column, fills remaining width
+             ├─ TextView (tv_item_name)      ← item name; prefixed "⚠ " for legacy items
+             ├─ TextView (tv_item_category)  ← decoded field summary (type · colour · size…)
+             └─ TextView (hint)              ← "Tap to view / delete" — sighted hint only
+
+    The colour dot is set programmatically in WardrobeAdapter.getView() using
+    Color.parseColor("#" + item.color). Falls back to #607D8B (grey) if the
+    stored hex is missing or malformed.
+
+    The hint TextView has importantForAccessibility="no" — TalkBack reads the
+    full row via the root view's contentDescription instead (set in getView()).
+    The hint is purely a visual affordance for sighted users.
+
+    minHeight="64dp" on the root ensures the row meets the minimum accessible
+    touch target size even when the text content is very short.
+-->
+
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -9,7 +33,10 @@
     android:gravity="center_vertical"
     android:minHeight="64dp">
 
-    <!-- Color dot -->
+    <!--
+        Colour dot — background drawable is color_dot.xml (circle shape).
+        Background colour is overridden in WardrobeAdapter.getView() at bind time.
+    -->
     <View
         android:id="@+id/view_color_dot"
         android:layout_width="24dp"
@@ -17,12 +44,13 @@
         android:layout_marginEnd="12dp"
         android:background="@drawable/color_dot" />
 
-    <!-- Name and category -->
+    <!-- Text column — fills all width to the right of the colour dot -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
+        <!-- Item name — "⚠ Name" for legacy items (set in WardrobeAdapter.getView()) -->
         <TextView
             android:id="@+id/tv_item_name"
             android:layout_width="wrap_content"
@@ -31,6 +59,7 @@
             android:textStyle="bold"
             android:textColor="?attr/colorOnSurface" />
 
+        <!-- Decoded category line — e.g. "Jacket · Blue · M · Winter · Casual" -->
         <TextView
             android:id="@+id/tv_item_category"
             android:layout_width="wrap_content"
@@ -38,10 +67,15 @@
             android:textSize="13sp"
             android:textColor="?attr/colorOnSurface" />
 
+        <!--
+            Sighted-only tap hint — excluded from accessibility tree.
+            TalkBack reads the full row via root contentDescription in getView(),
+            which already includes the "double tap to view" instruction.
+        -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Double tap to edit or delete"
+            android:text="@string/item_hint_edit_delete"
             android:textSize="11sp"
             android:textColor="?attr/colorPrimary"
             android:layout_marginTop="2dp"

@@ -1,23 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout
+
+<!--
+    activity_main.xml — root layout for MainActivity.
+
+    Structure:
+      FrameLayout (root_layout)           ← tutorial overlay anchor
+        └─ LinearLayout (vertical)
+             ├─ FrameLayout (fragment_container)   ← fragment host, weight=1
+             └─ BottomNavigationView               ← tab bar, wrap_content
+
+    root_layout MUST remain a FrameLayout. TutorialManager adds and removes
+    its banner and highlight ring as direct children of root_layout using
+    absolute FrameLayout positioning. Changing this to LinearLayout or
+    ConstraintLayout will break all tutorial overlay placement.
+
+    fragment_container uses layout_weight=1 inside the LinearLayout so it
+    fills all vertical space above the bottom navigation bar.
+-->
+
+<FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <FrameLayout
-        android:id="@+id/fragment_container"
+    <!-- Vertical stack: fragment area on top, nav bar pinned to bottom -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginBottom="56dp" />
+        android:orientation="vertical">
 
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottom_navigation"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:layout_gravity="bottom"
-        android:background="?attr/colorSurface"
-        app:menu="@menu/bottom_nav_menu"
-        app:labelVisibilityMode="labeled" />
+        <!-- Fragment host — receives all four tab fragments and FilterFragment -->
+        <FrameLayout
+            android:id="@+id/fragment_container"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
 
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+        <!-- Bottom nav — tab IDs must match R.id.tab_* references in TutorialManager -->
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/bottom_navigation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:menu="@menu/bottom_nav_menu"
+            xmlns:app="http://schemas.android.com/apk/res-auto" />
+
+    </LinearLayout>
+
+</FrameLayout>

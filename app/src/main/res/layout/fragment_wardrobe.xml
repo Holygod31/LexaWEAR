@@ -1,4 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
+
+<!--
+    fragment_wardrobe.xml — Wardrobe tab layout (WardrobeFragment).
+
+    Structure:
+      LinearLayout (vertical, full height)
+        ├─ LinearLayout (header block, padding=16dp)
+        │    ├─ TextView (title)                  ← static heading
+        │    ├─ TextView (tv_wardrobe_status)      ← item count / NFC instructions
+        │    ├─ LinearLayout (filter row)
+        │    │    ├─ Button (btn_open_filters)     ← opens FilterFragment
+        │    │    └─ Button (btn_voice_filter)     ← spoken filter input
+        │    ├─ TextView (tv_active_filters)       ← decoded active filter summary
+        │    └─ TextView (tv_legacy_banner)        ← shown when any item has legacy codes
+        ├─ ListView (list_wardrobe, weight=1)      ← WardrobeAdapter item list
+        └─ Button (btn_wardrobe_scan)              ← sets isScanning=true; pinned at bottom
+
+    The header block uses wrap_content so it only takes the space it needs;
+    list_wardrobe uses weight=1 to fill the remaining vertical space above the scan button.
+-->
+
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -6,28 +27,33 @@
     android:orientation="vertical"
     android:background="?android:attr/colorBackground">
 
+    <!-- Header block — fixed height, does not scroll -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Title -->
+        <!-- Static screen title -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Wardrobe"
+            android:text="@string/wardrobe_title"
             android:textSize="24sp"
             android:textStyle="bold"
             android:textColor="?attr/colorOnBackground"
             android:layout_marginBottom="8dp" />
 
-        <!-- Status -->
+        <!--
+            Live status line — shows item count or NFC hold-tag instruction.
+            Updated by WardrobeFragment.updateStatus().
+            accessibilityLiveRegion="polite" announces changes without interrupting TalkBack.
+        -->
         <TextView
             android:id="@+id/tv_wardrobe_status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Scan a tag to add an item."
+            android:text="@string/wardrobe_status_default"
             android:textSize="14sp"
             android:textColor="?attr/colorOnSurface"
             android:gravity="center"
@@ -36,23 +62,28 @@
             android:layout_marginBottom="8dp"
             android:accessibilityLiveRegion="polite" />
 
-        <!-- Filter + Mic buttons -->
+        <!--
+            Filter control row — btn_open_filters takes remaining width (weight=1);
+            btn_voice_filter is fixed at 64dp so it stays a square touch target.
+        -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:layout_marginBottom="8dp">
 
+            <!-- Opens FilterFragment via MainActivity.loadFragment() -->
             <Button
                 android:id="@+id/btn_open_filters"
                 android:layout_width="0dp"
                 android:layout_height="64dp"
                 android:layout_weight="1"
                 android:layout_marginEnd="8dp"
-                android:text="Filters"
+                android:text="@string/btn_filters"
                 android:textSize="16sp"
-                android:contentDescription="Open filter options" />
+                android:contentDescription="@string/btn_filters_description" />
 
+            <!-- Mic button — launches speech recognition for voice filter input -->
             <Button
                 android:id="@+id/btn_voice_filter"
                 android:layout_width="64dp"
@@ -60,24 +91,50 @@
                 android:text="🎤"
                 android:textSize="20sp"
                 android:padding="0dp"
-                android:contentDescription="Tap to filter by voice" />
+                android:contentDescription="@string/btn_voice_filter_description" />
 
         </LinearLayout>
 
-        <!-- Active filter summary -->
+        <!--
+            Active filter summary line — updated by WardrobeFragment.applyFilters().
+            Shows decoded filter names (e.g. "Jacket · Blue") or "No filters".
+            accessibilityLiveRegion="polite" announces filter changes to TalkBack.
+        -->
         <TextView
             android:id="@+id/tv_active_filters"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="No filters active"
+            android:text="@string/wardrobe_no_filters"
             android:textSize="12sp"
             android:textColor="?attr/colorOnSurface"
             android:layout_marginBottom="4dp"
             android:accessibilityLiveRegion="polite" />
 
+        <!--
+            Legacy items banner — visibility="gone" by default.
+            Made visible by WardrobeFragment.updateLegacyBanner() when items.count{isLegacy} > 0.
+            Text is set programmatically with the legacy item count.
+            accessibilityLiveRegion="polite" announces it when it appears.
+        -->
+        <TextView
+            android:id="@+id/tv_legacy_banner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:textColor="#D32F2F"
+            android:padding="8dp"
+            android:background="@drawable/status_background"
+            android:layout_marginTop="4dp"
+            android:visibility="gone"
+            android:accessibilityLiveRegion="polite" />
+
     </LinearLayout>
 
-    <!-- Item list -->
+    <!--
+        Item list — weight=1 fills all vertical space between the header and scan button.
+        Populated by WardrobeAdapter using filteredItems.
+        divider="@null" with dividerHeight="8dp" gives spacing without a visible line.
+    -->
     <ListView
         android:id="@+id/list_wardrobe"
         android:layout_width="match_parent"
@@ -87,14 +144,18 @@
         android:dividerHeight="8dp"
         android:divider="@null" />
 
-    <!-- Scan button pinned to bottom -->
+    <!--
+        Scan button — always visible; pinned at the bottom below the list.
+        Tapping sets WardrobeFragment.isScanning=true and waits for NFC tag discovery.
+        Height 72dp matches the minimum accessible touch target size.
+    -->
     <Button
         android:id="@+id/btn_wardrobe_scan"
         android:layout_width="match_parent"
         android:layout_height="72dp"
-        android:text="Scan Tag to Add Item"
+        android:text="@string/btn_scan_tag"
         android:textSize="18sp"
         android:layout_margin="16dp"
-        android:contentDescription="Scan NFC tag to add clothing item to wardrobe" />
+        android:contentDescription="@string/btn_scan_tag_description" />
 
 </LinearLayout>

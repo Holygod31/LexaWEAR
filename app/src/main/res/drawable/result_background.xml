@@ -1,7 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
+
+<!--
+    result_background.xml — Rounded rectangle background for result cards and banners.
+
+    Used by:
+      - layout_care_results cards (CareFragment.displayCareInfo())  ← dynamically built
+      - item_wardrobe.xml root LinearLayout                         ← wardrobe list rows
+
+    Identical shape to input_background.xml but uses colorPrimary for the border
+    instead of colorControlNormal — the stronger accent colour distinguishes
+    result/display cards from editable input fields.
+-->
+
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
+
+    <!-- Theme-aware surface fill — adapts to light/dark mode automatically -->
     <solid android:color="?attr/colorSurface" />
+
     <corners android:radius="8dp" />
+
+    <!-- Primary-colour border — distinguishes result cards from input fields -->
     <stroke android:width="1dp" android:color="?attr/colorPrimary" />
+
 </shape>

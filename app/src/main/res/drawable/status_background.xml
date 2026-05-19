@@ -1,7 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
+
+<!--
+    status_background.xml — Rounded rectangle background for status and banner TextViews.
+
+    Used by:
+      - tv_care_status (fragment_care.xml)         ← scan instructions / result status
+      - tv_legacy_banner (fragment_care.xml)        ← legacy tag warning
+      - tv_wardrobe_status (fragment_wardrobe.xml)  ← item count / hold-tag instruction
+      - tv_legacy_banner (fragment_wardrobe.xml)    ← legacy items warning
+      - tv_status (fragment_nfc.xml)                ← write wizard status
+
+    Same shape as result_background.xml (colorPrimary border). Kept as a separate
+    file so status areas and result cards can be restyled independently in future.
+-->
+
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
+
+    <!-- Theme-aware surface fill — adapts to light/dark mode automatically -->
     <solid android:color="?attr/colorSurface" />
+
     <corners android:radius="8dp" />
+
+    <!-- Primary-colour border — consistent with result_background.xml -->
     <stroke android:width="1dp" android:color="?attr/colorPrimary" />
+
 </shape>

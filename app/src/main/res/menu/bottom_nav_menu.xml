@@ -1,18 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
+
+<!--
+    bottom_nav_menu.xml — Bottom navigation tab definitions for MainActivity.
+
+    Three tabs in display order: Write (NFC) | Scan (Care) | Wardrobe.
+
+    Tab IDs are referenced throughout the codebase — do not rename them:
+      R.id.tab_nfc      — NfcFragment (Write tab)
+      R.id.tab_care     — CareFragment (Scan tab)
+      R.id.tab_wardrobe — WardrobeFragment (Wardrobe tab)
+
+    These IDs are used by:
+      - MainActivity.onTabSelected()       ← fragment routing
+      - TutorialManager.steps             ← each step's target tab
+      - TutorialManager.complete()        ← navigates back to tab_care on finish
+      - WardrobeFragment.btnOpenFilters   ← returns to tab_wardrobe after filtering
+
+    Tab order here controls the visual left-to-right order in the nav bar.
+    The app starts on tab_care (set in MainActivity.onCreate()).
+-->
+
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Write tab — NfcFragment; guided NFC tag writing wizard -->
     <item
         android:id="@+id/tab_nfc"
         android:icon="@android:drawable/ic_menu_edit"
-        android:title="Write"
-        android:contentDescription="Write tab - write clothing info to a tag" />
+        android:title="@string/tab_write"
+        android:contentDescription="@string/tab_write_description" />
+
+    <!-- Scan tab — CareFragment; NFC tag scan and care info display. Default start tab. -->
     <item
         android:id="@+id/tab_care"
         android:icon="@android:drawable/ic_menu_help"
-        android:title="Scan"
-        android:contentDescription="Scan tab - read care instructions from a tag" />
+        android:title="@string/tab_scan"
+        android:contentDescription="@string/tab_scan_description" />
+
+    <!-- Wardrobe tab — WardrobeFragment; persistent clothing item list with filtering -->
     <item
         android:id="@+id/tab_wardrobe"
         android:icon="@android:drawable/ic_menu_agenda"
-        android:title="Wardrobe"
-        android:contentDescription="Wardrobe tab - manage your clothing items" />
+        android:title="@string/tab_wardrobe"
+        android:contentDescription="@string/tab_wardrobe_description" />
+
 </menu>

@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+    fragment_camera.xml — Camera screen layout (CameraFragment).
+
+    Structure:
+      FrameLayout (full screen, black background)
+        ├─ PreviewView (camera_preview)      ← full-screen live camera feed (bottom layer)
+        ├─ TextView (tv_camera_overlay)      ← live analysis hint, pinned top (semi-transparent)
+        ├─ TextView (tv_camera_mode)         ← current mode badge, pinned top-end
+        └─ LinearLayout (bottom controls)   ← status + button row, pinned bottom
+             ├─ TextView (tv_camera_status)  ← capture progress / result summary
+             └─ LinearLayout (button row)
+                  ├─ Button (btn_camera_cancel)   ← weight=1, returns to caller
+                  ├─ Button (btn_camera_capture)  ← weight=2 (primary action), takes still
+                  └─ Button (btn_camera_care)     ← weight=1, toggles mode OR becomes "Retake"
+
+    FrameLayout is required here — overlay views (tv_camera_overlay, tv_camera_mode,
+    bottom controls) are stacked over the PreviewView using layout_gravity.
+    Changing this to LinearLayout would break the overlay positioning.
+
+    Black background (#000000) ensures no white flash while the camera surface loads.
+
+    Button weight rationale:
+      Capture (weight=2) is the primary action and is given double width so blind
+      users can find it easily by feel. Cancel and Care/Retake share the remaining
+      width equally (weight=1 each).
+-->
+
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000">
+
+    <!-- Full-screen camera preview — bottom layer; all other views stack on top -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/camera_preview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!--
+        Live analysis overlay — pinned to the top edge over the preview.
+        Updated by VisionAnalyzer.analyzeLiveFrame() during live mode;
+        replaced by the decoded result summary after a still capture.
+        Semi-transparent background (#AA000000) keeps text readable over any scene.
+        accessibilityLiveRegion="polite" announces live label changes to TalkBack.
+    -->
+    <TextView
+        android:id="@+id/tv_camera_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:background="#AA000000"
+        android:textColor="#FFFFFF"
+        android:textSize="15sp"
+        android:padding="16dp"
+        android:text="@string/camera_overlay_clothing"
+        android:accessibilityLiveRegion="polite"
+        android:contentDescription="@string/camera_overlay_live_description" />
+
+    <!--
+        Mode badge — pinned to top-end corner over the preview.
+        Updated by CameraFragment.updateModeUI() when the user toggles between
+        clothing and care-label mode. Blue background distinguishes it from the
+        black overlay bar at the top.
+    -->
+    <TextView
+        android:id="@+id/tv_camera_mode"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_margin="16dp"
+        android:background="#AA1565C0"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp"
+        android:padding="8dp"
+        android:text="@string/camera_mode_clothing"
+        android:contentDescription="@string/camera_mode_current_description" />
+
+    <!--
+        Bottom controls panel — pinned to the bottom edge over the preview.
+        Semi-transparent background matches the overlay bar for visual consistency.
+        Contains the status line and the three-button action row.
+    -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:background="#AA000000"
+        android:padding="16dp">
+
+        <!--
+            Status line — shows capture progress ("Analysing…"), errors, or the
+            decoded result summary after capture. Also read by TalkBack on change.
+            accessibilityLiveRegion="polite" avoids interrupting current speech.
+        -->
+        <TextView
+            android:id="@+id/tv_camera_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#CCFFFFFF"
+            android:textSize="13sp"
+            android:gravity="center"
+            android:layout_marginBottom="12dp"
+            android:text="@string/camera_analyzing"
+            android:accessibilityLiveRegion="polite" />
+
+        <!--
+            Three-button action row.
+            After capture, btn_camera_capture becomes "Use results" and
+            btn_camera_care becomes "Retake" (CameraFragment.showResultActions()).
+        -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <!-- Cancel — returns to the calling fragment without results -->
+            <Button
+                android:id="@+id/btn_camera_cancel"
+                android:layout_width="0dp"
+                android:layout_height="64dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="@string/camera_btn_cancel"
+                android:textSize="15sp"
+                android:contentDescription="@string/camera_btn_cancel_description" />
+
+            <!--
+                Capture — primary action; weight=2 gives it double width for easy
+                targeting by blind users. Becomes "Use results" after a successful capture.
+            -->
+            <Button
+                android:id="@+id/btn_camera_capture"
+                android:layout_width="0dp"
+                android:layout_height="72dp"
+                android:layout_weight="2"
+                android:text="@string/camera_btn_capture"
+                android:textSize="17sp"
+                android:layout_marginEnd="8dp"
+                android:contentDescription="@string/camera_btn_capture_description" />
+
+            <!--
+                Mode toggle / Retake — switches between clothing and care-label mode
+                before capture; becomes "Retake" after capture to restart the flow.
+            -->
+            <Button
+                android:id="@+id/btn_camera_care"
+                android:layout_width="0dp"
+                android:layout_height="64dp"
+                android:layout_weight="1"
+                android:text="@string/camera_btn_care_label"
+                android:textSize="13sp"
+                android:contentDescription="@string/camera_btn_care_label_description" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</FrameLayout>

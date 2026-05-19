@@ -1,4 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
+
+<!--
+    fragment_nfc.xml — Write tab layout (NfcFragment).
+
+    Structure:
+      LinearLayout (vertical, full height)
+        ├─ TextView (title)                     ← static heading
+        ├─ TextView (tv_status)                 ← live status / NFC instructions
+        ├─ TextView (tv_step_indicator)         ← "Step N of 14"
+        ├─ TextView (tv_question)               ← current step question
+        ├─ LinearLayout (layout_free_text)      ← text input + mic button (name/material/notes)
+        ├─ Button (btn_camera)                  ← opens CameraFragment in Source.WRITE mode
+        ├─ ScrollView (scroll_options)          ← option buttons for enumerated steps
+        ├─ LinearLayout (layout_custom_size)    ← inline custom-size entry (size step only)
+        ├─ TextView (tv_step_error)             ← inline validation error
+        ├─ LinearLayout (nav row)               ← Back / Skip / Next buttons
+        ├─ ScrollView (layout_summary)          ← decoded answer summary (shown at end)
+        └─ Button (btn_write)                   ← shown with summary; triggers NFC write
+
+    Visibility rules (managed by NfcFragment.showStep / showSummary):
+      Wizard active  : layout_free_text OR scroll_options visible (not both); summary gone
+      Summary active : layout_free_text and scroll_options gone; layout_summary and btn_write visible
+      layout_custom_size: only shown when "CUSTOM" size option is tapped
+      tv_step_error  : only shown on validation failure; cleared on advance
+-->
+
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -6,22 +32,25 @@
     android:orientation="vertical"
     android:background="?android:attr/colorBackground">
 
-    <!-- Title -->
+    <!-- Static screen title -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Write Tag"
+        android:text="@string/write_title"
         android:textSize="24sp"
         android:textStyle="bold"
         android:textColor="?attr/colorOnBackground"
         android:layout_margin="16dp" />
 
-    <!-- Status -->
+    <!--
+        Live status line — updated by NfcFragment.updateStatus().
+        accessibilityLiveRegion="polite" announces changes without interrupting TalkBack.
+    -->
     <TextView
         android:id="@+id/tv_status"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Let's tag a clothing item."
+        android:text="@string/write_status_default"
         android:textSize="14sp"
         android:textColor="?attr/colorOnSurface"
         android:gravity="center"
@@ -32,41 +61,49 @@
         android:layout_marginBottom="16dp"
         android:accessibilityLiveRegion="polite" />
 
-    <!-- Step indicator -->
+    <!-- Step counter — e.g. "Step 3 of 14". Set by NfcFragment.showStep(). -->
     <TextView
         android:id="@+id/tv_step_indicator"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Step 1 of 14"
         android:textSize="12sp"
         android:textColor="?attr/colorOnSurface"
         android:layout_marginStart="16dp"
         android:layout_marginBottom="4dp" />
 
-    <!-- Question -->
+    <!--
+        Current step question — updated each step.
+        accessibilityLiveRegion="polite" so TalkBack re-reads it on step change
+        (combined with announceForAccessibility in NfcFragment.showStep).
+    -->
     <TextView
         android:id="@+id/tv_question"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="What is this item called?"
         android:textSize="20sp"
         android:textStyle="bold"
         android:textColor="?attr/colorOnBackground"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="12dp"
         android:accessibilityLiveRegion="polite" />
 
-    <!-- Input field + mic button -->
+    <!--
+        Free-text input row — visible for steps: Name (N), Material (M), Notes (X).
+        Hidden and replaced by scroll_options for all enumerated steps.
+        EditText + mic button share the row at equal-or-weighted widths.
+    -->
     <LinearLayout
+        android:id="@+id/layout_free_text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="8dp"
         android:gravity="center_vertical">
 
+        <!-- Text entry — weight=1 fills all space left of the mic button -->
         <EditText
             android:id="@+id/et_step_input"
             android:layout_width="0dp"
@@ -76,8 +113,9 @@
             android:padding="12dp"
             android:background="@drawable/input_background"
             android:inputType="textCapSentences"
-            android:contentDescription="Answer input field" />
+            android:contentDescription="@string/input_description" />
 
+        <!-- Mic button — launches speech recognition; result populates et_step_input -->
         <Button
             android:id="@+id/btn_mic"
             android:layout_width="56dp"
@@ -86,11 +124,106 @@
             android:text="🎤"
             android:textSize="20sp"
             android:padding="0dp"
-            android:contentDescription="Tap to speak your answer" />
+            android:contentDescription="@string/btn_mic_description" />
 
     </LinearLayout>
 
-    <!-- Navigation buttons -->
+    <!-- Camera button — always visible during wizard; opens CameraFragment (Source.WRITE) -->
+    <Button
+        android:id="@+id/btn_camera"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="8dp"
+        android:text="@string/btn_camera_care"
+        android:textSize="16sp"
+        android:contentDescription="@string/btn_camera_description" />
+
+    <!--
+        Option buttons container — visible for enumerated steps (T/CL/P/S/F/SE/W/D/I/B/C).
+        Hidden during free-text steps. Buttons are built dynamically by
+        NfcFragment.buildOptionButtons(); do not add static children here.
+        weight=1 so it expands to fill the space that layout_free_text occupied.
+    -->
+    <ScrollView
+        android:id="@+id/scroll_options"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="8dp"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/options_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+    </ScrollView>
+
+    <!--
+        Custom size row — visibility="gone" by default; shown when the user taps
+        "Custom" in the size option list. Dismissed by NfcFragment after confirm.
+    -->
+    <LinearLayout
+        android:id="@+id/layout_custom_size"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="8dp"
+        android:gravity="center_vertical"
+        android:visibility="gone">
+
+        <EditText
+            android:id="@+id/et_custom_size"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:layout_weight="1"
+            android:textSize="16sp"
+            android:padding="12dp"
+            android:background="@drawable/input_background"
+            android:inputType="text"
+            android:hint="@string/size_custom"
+            android:contentDescription="@string/size_custom_prompt" />
+
+        <!-- Confirm button — triggers NfcFragment.interpretSize() on the entered text -->
+        <Button
+            android:id="@+id/btn_confirm_custom_size"
+            android:layout_width="wrap_content"
+            android:layout_height="56dp"
+            android:layout_marginStart="8dp"
+            android:text="@string/btn_confirm_ok"
+            android:contentDescription="@string/btn_confirm_custom_size_description" />
+
+    </LinearLayout>
+
+    <!--
+        Inline validation error — visibility="gone" by default.
+        Shown by NfcFragment.showStepError(); cleared by clearStepError() on advance.
+        accessibilityLiveRegion="polite" ensures TalkBack reads it immediately on appear.
+    -->
+    <TextView
+        android:id="@+id/tv_step_error"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="14sp"
+        android:textColor="#D32F2F"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="4dp"
+        android:visibility="gone"
+        android:accessibilityLiveRegion="polite" />
+
+    <!--
+        Navigation row — Back / Skip / Next share the width equally (weight=1 each).
+        Back is disabled (alpha 0.4) on step 0. Skip is hidden on the Name step (mandatory).
+        btn_next label changes to "Review" on the final step.
+    -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -104,23 +237,40 @@
             android:layout_width="0dp"
             android:layout_height="64dp"
             android:layout_weight="1"
-            android:text="Back"
+            android:text="@string/btn_back"
             android:textSize="16sp"
-            android:layout_marginEnd="8dp"
-            android:contentDescription="Go back to previous field" />
+            android:layout_marginEnd="4dp"
+            android:contentDescription="@string/btn_back_description" />
+
+        <!-- Skip — invisible (not just disabled) on the mandatory Name step -->
+        <Button
+            android:id="@+id/btn_skip"
+            android:layout_width="0dp"
+            android:layout_height="64dp"
+            android:layout_weight="1"
+            android:text="@string/btn_skip"
+            android:textSize="16sp"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp"
+            android:contentDescription="@string/btn_skip_description" />
 
         <Button
             android:id="@+id/btn_next"
             android:layout_width="0dp"
             android:layout_height="64dp"
             android:layout_weight="1"
-            android:text="Next"
+            android:text="@string/btn_next"
             android:textSize="16sp"
-            android:contentDescription="Go to next field" />
+            android:layout_marginStart="4dp"
+            android:contentDescription="@string/btn_next_description" />
 
     </LinearLayout>
 
-    <!-- Summary screen (hidden until final step) -->
+    <!--
+        Summary ScrollView — visibility="gone" during wizard; shown by NfcFragment.showSummary()
+        after the last step. Contains tv_summary with the decoded answer list.
+        weight=1 matches scroll_options so it fills the same vertical space.
+    -->
     <ScrollView
         android:id="@+id/layout_summary"
         android:layout_width="match_parent"
@@ -137,20 +287,24 @@
             android:textSize="15sp"
             android:textColor="?attr/colorOnBackground"
             android:lineSpacingExtra="6dp"
-            android:contentDescription="Summary of entered clothing information"
+            android:contentDescription="@string/summary_description"
             android:accessibilityLiveRegion="polite" />
 
     </ScrollView>
 
-    <!-- Write button pinned to bottom -->
+    <!--
+        Write button — visibility="gone" during wizard; shown alongside layout_summary.
+        Height 72dp matches the minimum accessible touch target size.
+        Triggers the NFC write flow — prompts the user to hold a tag.
+    -->
     <Button
         android:id="@+id/btn_write"
         android:layout_width="match_parent"
         android:layout_height="72dp"
-        android:text="Write to Tag"
+        android:text="@string/btn_write"
         android:textSize="18sp"
         android:layout_margin="16dp"
         android:visibility="gone"
-        android:contentDescription="Write entered information to NFC tag" />
+        android:contentDescription="@string/btn_write_description" />
 
 </LinearLayout>
