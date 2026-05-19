@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="660" viewBox="0 0 1200 660" font-family="Arial, Helvetica, sans-serif">
+
+  <rect width="1200" height="660" fill="#FAFAFA"/>
+
+  <!-- Title -->
+  <text x="600" y="44" text-anchor="middle" font-size="22" font-weight="600" fill="#1a1a1a">LexaWEAR — Architecture Overview</text>
+  <text x="600" y="68" text-anchor="middle" font-size="13" fill="#888">Android app for blind users to manage clothing via NFC</text>
+
+  <!-- TIER 1: INPUTS -->
+  <text x="600" y="104" text-anchor="middle" font-size="11" fill="#aaa" letter-spacing="2">INPUTS</text>
+
+  <rect x="80" y="114" width="260" height="80" rx="12" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
+  <text x="210" y="148" text-anchor="middle" font-size="16" font-weight="600" fill="#085041">NFC Tag</text>
+  <text x="210" y="172" text-anchor="middle" font-size="13" fill="#0F6E56">Read · Write</text>
+
+  <rect x="470" y="114" width="260" height="80" rx="12" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
+  <text x="600" y="148" text-anchor="middle" font-size="16" font-weight="600" fill="#085041">Camera</text>
+  <text x="600" y="172" text-anchor="middle" font-size="13" fill="#0F6E56">Clothing · Care label</text>
+
+  <rect x="860" y="114" width="260" height="80" rx="12" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
+  <text x="990" y="148" text-anchor="middle" font-size="16" font-weight="600" fill="#085041">Buttons + Voice</text>
+  <text x="990" y="172" text-anchor="middle" font-size="13" fill="#0F6E56">Write wizard input</text>
+
+  <!-- Arrows into screens -->
+  <line x1="210" y1="194" x2="210" y2="268" stroke="#0F6E56" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="600" y1="194" x2="600" y2="268" stroke="#0F6E56" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="990" y1="194" x2="990" y2="268" stroke="#0F6E56" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- TIER 2: SCREENS -->
+  <text x="600" y="258" text-anchor="middle" font-size="11" fill="#aaa" letter-spacing="2">SCREENS — MANAGED BY MAINACTIVITY</text>
+
+  <rect x="60" y="268" width="1080" height="180" rx="16" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+
+  <rect x="90" y="296" width="220" height="120" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+  <text x="200" y="330" text-anchor="middle" font-size="15" font-weight="600" fill="#042C53">Write</text>
+  <text x="200" y="352" text-anchor="middle" font-size="12" fill="#185FA5">14-step button wizard</text>
+  <text x="200" y="370" text-anchor="middle" font-size="12" fill="#378ADD">Encodes clothing → tag</text>
+  <text x="200" y="390" text-anchor="middle" font-size="12" fill="#378ADD">TalkBack accessible</text>
+
+  <rect x="350" y="296" width="220" height="120" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+  <text x="460" y="330" text-anchor="middle" font-size="15" font-weight="600" fill="#042C53">Scan</text>
+  <text x="460" y="352" text-anchor="middle" font-size="12" fill="#185FA5">Reads NFC tags</text>
+  <text x="460" y="370" text-anchor="middle" font-size="12" fill="#378ADD">Decodes care info</text>
+  <text x="460" y="390" text-anchor="middle" font-size="12" fill="#378ADD">Add to wardrobe</text>
+
+  <rect x="610" y="296" width="220" height="120" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+  <text x="720" y="330" text-anchor="middle" font-size="15" font-weight="600" fill="#042C53">Wardrobe</text>
+  <text x="720" y="352" text-anchor="middle" font-size="12" fill="#185FA5">JSON storage</text>
+  <text x="720" y="370" text-anchor="middle" font-size="12" fill="#378ADD">Filtered item list</text>
+  <text x="720" y="390" text-anchor="middle" font-size="12" fill="#378ADD">Voice filter</text>
+
+  <rect x="870" y="296" width="220" height="120" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+  <text x="980" y="330" text-anchor="middle" font-size="15" font-weight="600" fill="#042C53">Filter</text>
+  <text x="980" y="352" text-anchor="middle" font-size="12" fill="#185FA5">Type · Colour</text>
+  <text x="980" y="370" text-anchor="middle" font-size="12" fill="#378ADD">Season · Formality</text>
+  <text x="980" y="390" text-anchor="middle" font-size="12" fill="#378ADD">Returns codes to Wardrobe</text>
+
+  <!-- Arrows down to services -->
+  <line x1="200" y1="448" x2="200" y2="514" stroke="#534AB7" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="460" y1="448" x2="460" y2="514" stroke="#534AB7" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="720" y1="448" x2="720" y2="514" stroke="#534AB7" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="980" y1="448" x2="980" y2="514" stroke="#534AB7" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- TIER 3: SHARED SERVICES -->
+  <text x="600" y="504" text-anchor="middle" font-size="11" fill="#aaa" letter-spacing="2">SHARED SERVICES</text>
+
+  <rect x="80" y="514" width="300" height="80" rx="12" fill="#FAECE7" stroke="#993C1D" stroke-width="1.5"/>
+  <text x="230" y="548" text-anchor="middle" font-size="16" font-weight="600" fill="#4A1B0C">Colour palette</text>
+  <text x="230" y="572" text-anchor="middle" font-size="13" fill="#993C1D">44 colours · used by all screens</text>
+
+  <rect x="450" y="514" width="300" height="80" rx="12" fill="#FAECE7" stroke="#993C1D" stroke-width="1.5"/>
+  <text x="600" y="548" text-anchor="middle" font-size="16" font-weight="600" fill="#4A1B0C">Vision analyser</text>
+  <text x="600" y="572" text-anchor="middle" font-size="13" fill="#993C1D">TFLite · ML Kit · k-means colour</text>
+
+  <rect x="820" y="514" width="300" height="80" rx="12" fill="#FAECE7" stroke="#993C1D" stroke-width="1.5"/>
+  <text x="970" y="548" text-anchor="middle" font-size="16" font-weight="600" fill="#4A1B0C">Language system</text>
+  <text x="970" y="572" text-anchor="middle" font-size="13" fill="#993C1D">EN · FR · tags always language-neutral</text>
+
+  <!-- Legend -->
+  <rect x="80" y="620" width="16" height="16" rx="3" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
+  <text x="104" y="633" font-size="12" fill="#555">Inputs</text>
+  <rect x="220" y="620" width="16" height="16" rx="3" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+  <text x="244" y="633" font-size="12" fill="#555">Screens</text>
+  <rect x="360" y="620" width="16" height="16" rx="3" fill="#FAECE7" stroke="#993C1D" stroke-width="1.5"/>
+  <text x="384" y="633" font-size="12" fill="#555">Shared services</text>
+
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#555" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+</svg>
