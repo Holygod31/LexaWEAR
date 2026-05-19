@@ -8,26 +8,37 @@ import com.google.mlkit.vision.label.ImageLabeling
 import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import org.tensorflow.lite.Interpreter
+import java.io.FileInputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.channels.FileChannel
 
 /**
  * VisionAnalyzer — on-device analysis of clothing images and care labels.
  *
- * Clothing shot:
- *  - ML Kit Image Labeling   → clothing type code (T field), only if confidence ≥ threshold
- *  - K-means pixel clustering → dominant color hex via ColorPalette (CL field)
- *  - Heuristic edge analysis  → pattern code (P field)
+ * ── Clothing type detection — two-tier ───────────────────────────────────────
  *
- * Care label shot:
- *  - ML Kit OCR             → wash/dry/iron/bleach/dryclean codes
- *  - CareSymbolClassifier   → same fields from symbol icons (if model available)
+ * Tier 1 (preferred): Custom TFLite clothing classifier.
+ *   Drop `clothing_classifier.tflite` into `app/src/main/assets/` and update
+ *   [CLOTHING_LABELS] to match your trained model's class output order.
+ *   See `docs/clothing_classifier_training.md` for full training instructions.
  *
- * Design principles:
- *  - Confident silence beats a confident wrong answer.
- *    Type is omitted when ML Kit confidence < TYPE_CONFIDENCE_THRESHOLD.
- *    The typeLowConfidence flag is set so CameraFragment can prompt the user.
- *  - Colour uses k-means clustering (k=3) on a centre-cropped pixel sample
- *    to find the dominant colour, ignoring background and shadow pixels.
- *  - Partial results (colour only, no type) are fully valid and returned.
+ * Tier 2 (fallback): ML Kit Image Labeling.
+ *   Used automatically when `clothing_classifier.tflite` is absent.
+ *   Less accurate for clothing but requires no training.
+ *   Type is omitted when confidence < [TYPE_CONFIDENCE_THRESHOLD].
+ *
+ * ── Colour detection ─────────────────────────────────────────────────────────
+ * K-means clustering (k=3) on a centre-cropped pixel sample.
+ * Near-white and near-black pixels excluded to avoid background contamination.
+ * Result mapped to [ColorPalette] — same palette the rest of the app uses.
+ *
+ * ── Pattern detection ────────────────────────────────────────────────────────
+ * Heuristic edge-frequency analysis on a 64×64 downscaled grayscale copy.
+ *
+ * ── Care label ───────────────────────────────────────────────────────────────
+ * ML Kit OCR + optional CareSymbolClassifier TFLite stub.
  */
 class VisionAnalyzer(
     private val careSymbolClassifier: CareSymbolClassifier,
@@ -39,23 +50,107 @@ class VisionAnalyzer(
         val labels: List<String>,
         val confidence: Float,
         val fromCareLabel: Boolean = false,
-        /** True if type was detected but confidence was below threshold. */
+        /** True if type was seen but below confidence threshold — prompt manual entry. */
         val typeLowConfidence: Boolean = false
     )
 
     // ── Thresholds ────────────────────────────────────────────────────────────
 
-    /** Minimum ML Kit label confidence to accept a clothing type. */
+    /** Minimum ML Kit label confidence to accept a clothing type (fallback path). */
     private val TYPE_CONFIDENCE_THRESHOLD = 0.60f
 
     /**
-     * Minimum fraction lead the dominant k-means cluster must have over
-     * the second cluster to be accepted as dominant. If below this, the
-     * top-2 clusters are blended instead.
+     * Minimum TFLite softmax probability to accept a type from the custom model.
+     * Slightly lower than the ML Kit threshold because the custom model is more
+     * specialised and produces sharper distributions.
      */
+    private val TFLITE_TYPE_THRESHOLD = 0.55f
+
+    /** Minimum cluster fraction lead to accept the dominant k-means cluster. */
     private val CLUSTER_DOMINANCE_THRESHOLD = 0.15f
 
-    // ── Clothing type mapping ─────────────────────────────────────────────────
+    // ── Custom TFLite clothing classifier ────────────────────────────────────
+
+    /**
+     * Class labels in the EXACT ORDER your trained model outputs them.
+     *
+     * ⚠ IMPORTANT: Update this list after training to match your model's
+     * class output order. The order here must match the order used when
+     * you called `train_clothing_classifier.py` with your dataset.
+     *
+     * Default order matches the DeepFashion2-based training script in
+     * `tools/train_clothing_classifier.py`. If you trained on a different
+     * dataset or class mapping, update this list accordingly.
+     *
+     * See `docs/clothing_classifier_training.md` → "Updating CLOTHING_LABELS".
+     */
+    val CLOTHING_LABELS = listOf(
+        "SH",  // shirt / dress shirt
+        "TS",  // t-shirt / top
+        "JK",  // jacket / bomber / denim jacket
+        "CT",  // coat / overcoat / trench
+        "SW",  // sweater / jumper / pullover / knitwear
+        "HD",  // hoodie / sweatshirt
+        "BZ",  // blazer
+        "SU",  // suit
+        "VS",  // vest / waistcoat
+        "DR",  // dress / gown / skirt
+        "PT",  // pants / trousers / chinos
+        "JN",  // jeans / denim
+        "ST",  // shorts
+        "UW",  // underwear / lingerie / bra
+        "SC"   // socks / hosiery
+    )
+
+    private val TFLITE_MODEL_FILE = "clothing_classifier.tflite"
+
+    /**
+     * Input image size expected by the model (width = height = this value).
+     * MobileNetV2 default is 224. Update if you use a different backbone.
+     */
+    private val TFLITE_INPUT_SIZE = 224
+
+    private var tfliteInterpreter: Interpreter? = null
+
+    /** True when the custom TFLite model is loaded and ready to use. */
+    val isCustomModelAvailable: Boolean get() = tfliteInterpreter != null
+
+    init {
+        tfliteInterpreter = loadTfliteModel()
+    }
+
+    /**
+     * Attempts to load [TFLITE_MODEL_FILE] from assets.
+     * Returns null silently if the file is absent — this is the expected state
+     * before the model has been trained and dropped in.
+     */
+    private fun loadTfliteModel(): Interpreter? {
+        return try {
+            val ctx = context ?: return null
+            val files = ctx.assets.list("") ?: return null
+            if (TFLITE_MODEL_FILE !in files) return null
+
+            val afd         = ctx.assets.openFd(TFLITE_MODEL_FILE)
+            val inputStream = FileInputStream(afd.fileDescriptor)
+            val fileChannel = inputStream.channel
+            val model: java.nio.MappedByteBuffer = fileChannel.map(
+                FileChannel.MapMode.READ_ONLY,
+                afd.startOffset,
+                afd.declaredLength
+            )
+            Interpreter(model)
+        } catch (e: Exception) {
+            null  // Fail silently — app works without the custom model
+        }
+    }
+
+    /** Call this when the fragment is destroyed to free the TFLite interpreter. */
+    fun close() {
+        tfliteInterpreter?.close()
+        tfliteInterpreter = null
+    }
+
+    // ── Clothing type mapping (ML Kit fallback path) ──────────────────────────
 
     private val labelToTypeCode = mapOf(
         "shirt"        to "SH", "dress shirt"   to "SH",
@@ -107,14 +202,91 @@ class VisionAnalyzer(
 
     /**
      * Analyze a clothing item bitmap.
-     * Returns type (if confidence ≥ threshold), color (k-means), and pattern fields.
-     * When type confidence is below threshold, [AnalysisResult.typeLowConfidence] is
-     * set so CameraFragment can prompt the user to fill it in manually.
+     *
+     * Uses the custom TFLite model if available, otherwise falls back to ML Kit.
+     * Returns type (if confidence ≥ threshold), color (k-means), pattern fields.
+     * Sets [AnalysisResult.typeLowConfidence] when type was seen but not confident.
      */
     fun analyzeClothing(bitmap: Bitmap, onResult: (AnalysisResult) -> Unit) {
+        if (isCustomModelAvailable) {
+            analyzeClothingWithTflite(bitmap, onResult)
+        } else {
+            analyzeClothingWithMlKit(bitmap, onResult)
+        }
+    }
+
+    /**
+     * Tier 1: Custom TFLite clothing classifier.
+     * Pre-processes the bitmap to [TFLITE_INPUT_SIZE]×[TFLITE_INPUT_SIZE],
+     * runs inference, applies softmax, and maps the top class to a LexaWEAR
+     * type code using [CLOTHING_LABELS].
+     */
+    private fun analyzeClothingWithTflite(bitmap: Bitmap, onResult: (AnalysisResult) -> Unit) {
+        try {
+            val interpreter = tfliteInterpreter ?: run {
+                analyzeClothingWithMlKit(bitmap, onResult); return
+            }
+
+            // Pre-process: resize to model input size, normalize to [0, 1].
+            val resized     = Bitmap.createScaledBitmap(bitmap, TFLITE_INPUT_SIZE, TFLITE_INPUT_SIZE, true)
+            val inputBuffer = ByteBuffer.allocateDirect(4 * TFLITE_INPUT_SIZE * TFLITE_INPUT_SIZE * 3)
+                .apply { order(ByteOrder.nativeOrder()) }
+
+            for (y in 0 until TFLITE_INPUT_SIZE) {
+                for (x in 0 until TFLITE_INPUT_SIZE) {
+                    val pixel = resized.getPixel(x, y)
+                    inputBuffer.putFloat(Color.red(pixel)   / 255f)
+                    inputBuffer.putFloat(Color.green(pixel) / 255f)
+                    inputBuffer.putFloat(Color.blue(pixel)  / 255f)
+                }
+            }
+
+            // Run inference.
+            val outputBuffer = Array(1) { FloatArray(CLOTHING_LABELS.size) }
+            interpreter.run(inputBuffer, outputBuffer)
+            val scores = outputBuffer[0]
+
+            // Softmax (model may output logits).
+            val maxScore  = scores.max()
+            val expScores = scores.map { Math.exp((it - maxScore).toDouble()).toFloat() }
+            val sumExp    = expScores.sum()
+            val probs     = expScores.map { it / sumExp }
+
+            val topIndex      = probs.indices.maxByOrNull { probs[it] } ?: 0
+            val topProb       = probs[topIndex]
+            val topCode       = CLOTHING_LABELS.getOrElse(topIndex) { "" }
+
+            val typeCode          = if (topProb >= TFLITE_TYPE_THRESHOLD && topCode.isNotEmpty()) topCode else ""
+            val typeLowConfidence = topCode.isNotEmpty() && topProb < TFLITE_TYPE_THRESHOLD
+
+            val colorHex    = extractDominantColor(bitmap)
+            val patternCode = detectPattern(bitmap)
+
+            val fields = mutableMapOf<String, String>()
+            if (typeCode.isNotEmpty())    fields["T"]  = typeCode
+            if (colorHex.isNotEmpty())    fields["CL"] = colorHex
+            if (patternCode.isNotEmpty()) fields["P"]  = patternCode
+
+            onResult(AnalysisResult(
+                fields            = fields,
+                labels            = listOf("TFLite: $topCode (${(topProb * 100).toInt()}%)"),
+                confidence        = topProb,
+                typeLowConfidence = typeLowConfidence
+            ))
+
+        } catch (e: Exception) {
+            // TFLite inference failed — fall back to ML Kit.
+            analyzeClothingWithMlKit(bitmap, onResult)
+        }
+    }
+
+    /**
+     * Tier 2: ML Kit Image Labeling fallback.
+     * Used when custom TFLite model is absent or inference fails.
+     */
+    private fun analyzeClothingWithMlKit(bitmap: Bitmap, onResult: (AnalysisResult) -> Unit) {
         val image   = InputImage.fromBitmap(bitmap, 0)
         val labeler = ImageLabeling.getClient(
-            // Lower gate here — we want candidates, threshold is applied below.
             ImageLabelerOptions.Builder().setConfidenceThreshold(0.4f).build()
         )
 
@@ -148,7 +320,6 @@ class VisionAnalyzer(
                 ))
             }
             .addOnFailureListener {
-                // ML Kit failed — return colour and pattern from pixel analysis only.
                 val colorHex    = extractDominantColor(bitmap)
                 val patternCode = detectPattern(bitmap)
                 val fields = mutableMapOf<String, String>()
@@ -230,37 +401,28 @@ class VisionAnalyzer(
      * Steps:
      *  1. Centre-crop to the inner 60% to discard background/shadow edges.
      *  2. Sample a grid of pixels (up to ~400 samples for speed).
-     *  3. Skip near-white (brightness > 235) and near-black (brightness < 20)
-     *     pixels to avoid background and shadow contamination.
+     *  3. Skip near-white (brightness > 235) and near-black (brightness < 20).
      *  4. Run k-means for 10 iterations.
-     *  5. Pick the largest cluster as dominant, unless the lead over second
-     *     cluster is < CLUSTER_DOMINANCE_THRESHOLD — then blend top-2.
+     *  5. Pick largest cluster if it leads by ≥ [CLUSTER_DOMINANCE_THRESHOLD],
+     *     otherwise blend the top-2 by weight.
      *  6. Map the winning RGB to the nearest [ColorPalette] entry.
      *
-     * Falls back to [simpleAverageColor] on any error or insufficient samples.
-     * Returns the palette hex code, or empty string on total failure.
+     * Falls back to [simpleAverageColor] on error or insufficient samples.
      */
     fun extractDominantColor(bitmap: Bitmap): String {
         return try {
-            val w      = bitmap.width
-            val h      = bitmap.height
-            val startX = (w * 0.2).toInt()
-            val startY = (h * 0.2).toInt()
-            val endX   = (w * 0.8).toInt()
-            val endY   = (h * 0.8).toInt()
+            val w      = bitmap.width;  val h      = bitmap.height
+            val startX = (w * 0.2).toInt(); val endX = (w * 0.8).toInt()
+            val startY = (h * 0.2).toInt(); val endY = (h * 0.8).toInt()
             val stepX  = maxOf(1, (endX - startX) / 20)
             val stepY  = maxOf(1, (endY - startY) / 20)
 
             val samples = mutableListOf<Triple<Int, Int, Int>>()
             for (y in startY until endY step stepY) {
                 for (x in startX until endX step stepX) {
-                    val p          = bitmap.getPixel(x, y)
-                    val r          = Color.red(p)
-                    val g          = Color.green(p)
-                    val b          = Color.blue(p)
-                    val brightness = (r + g + b) / 3
-                    // Skip near-white and near-black — likely background or shadow.
-                    if (brightness in 20..235) samples.add(Triple(r, g, b))
+                    val p = bitmap.getPixel(x, y)
+                    val r = Color.red(p); val g = Color.green(p); val b = Color.blue(p)
+                    if ((r + g + b) / 3 in 20..235) samples.add(Triple(r, g, b))
                 }
             }
 
@@ -276,7 +438,6 @@ class VisionAnalyzer(
             val (r, g, b) = if (dominantFraction - secondFraction >= CLUSTER_DOMINANCE_THRESHOLD) {
                 sorted[0].centroid
             } else {
-                // Clusters too close — blend top-2 by weight.
                 val w1 = sorted[0].size; val w2 = sorted[1].size; val wt = (w1 + w2).toFloat()
                 Triple(
                     ((sorted[0].centroid.first  * w1 + sorted[1].centroid.first  * w2) / wt).toInt(),
@@ -297,42 +458,22 @@ class VisionAnalyzer(
     private data class Cluster(
         var centroid: Triple<Int, Int, Int>,
         val members: MutableList<Triple<Int, Int, Int>> = mutableListOf()
-    ) {
-        val size get() = members.size
-    }
+    ) { val size get() = members.size }
 
-    /**
-     * Lloyd's k-means on RGB triples with k++ initialisation.
-     * k++ spreads initial centroids for more stable results than random init.
-     */
-    private fun kMeans(
-        samples: List<Triple<Int, Int, Int>>,
-        k: Int,
-        iterations: Int
-    ): List<Cluster> {
+    private fun kMeans(samples: List<Triple<Int, Int, Int>>, k: Int, iterations: Int): List<Cluster> {
         if (samples.size <= k) return samples.map { Cluster(it, mutableListOf(it)) }
 
-        // k++ init — first centroid is the middle sample, each subsequent
-        // is chosen as the sample farthest from all existing centroids.
         val centroids = mutableListOf(samples[samples.size / 2])
         while (centroids.size < k) {
-            val farthest = samples.maxByOrNull { s ->
-                centroids.minOf { c -> rgbDistanceSq(s, c) }
-            } ?: break
+            val farthest = samples.maxByOrNull { s -> centroids.minOf { c -> rgbDistanceSq(s, c) } } ?: break
             if (!centroids.contains(farthest)) centroids.add(farthest) else break
         }
-        // Pad with evenly-spaced samples if k++ didn't yield enough unique centroids.
-        while (centroids.size < k) {
-            centroids.add(samples[(samples.size * centroids.size) / k])
-        }
+        while (centroids.size < k) centroids.add(samples[(samples.size * centroids.size) / k])
 
         var clusters = centroids.map { Cluster(it) }
-
         repeat(iterations) {
             clusters.forEach { it.members.clear() }
-            samples.forEach { s ->
-                clusters.minByOrNull { rgbDistanceSq(s, it.centroid) }!!.members.add(s)
-            }
+            samples.forEach { s -> clusters.minByOrNull { rgbDistanceSq(s, it.centroid) }!!.members.add(s) }
             clusters.forEach { cluster ->
                 if (cluster.members.isNotEmpty()) {
                     val n = cluster.members.size.toFloat()
@@ -352,13 +493,11 @@ class VisionAnalyzer(
         return dr * dr + dg * dg + db * db
     }
 
-    /** Simple fallback: average all centre-crop pixels and map to palette. */
     private fun simpleAverageColor(bitmap: Bitmap): String {
         val w = bitmap.width; val h = bitmap.height
         val startX = (w * 0.2).toInt(); val endX = (w * 0.8).toInt()
         val startY = (h * 0.2).toInt(); val endY = (h * 0.8).toInt()
-        val stepX  = maxOf(1, (endX - startX) / 20)
-        val stepY  = maxOf(1, (endY - startY) / 20)
+        val stepX  = maxOf(1, (endX - startX) / 20); val stepY = maxOf(1, (endY - startY) / 20)
         var rSum = 0L; var gSum = 0L; var bSum = 0L; var count = 0
         for (y in startY until endY step stepY) {
             for (x in startX until endX step stepX) {
@@ -367,9 +506,7 @@ class VisionAnalyzer(
             }
         }
         if (count == 0) return ""
-        return ColorPalette.nearestEntry(
-            (rSum / count).toInt(), (gSum / count).toInt(), (bSum / count).toInt()
-        ).hex
+        return ColorPalette.nearestEntry((rSum / count).toInt(), (gSum / count).toInt(), (bSum / count).toInt()).hex
     }
 
     // ── Pattern detection ─────────────────────────────────────────────────────
@@ -377,53 +514,33 @@ class VisionAnalyzer(
     /**
      * Heuristic pattern detection based on pixel variance and edge frequency
      * on a 64×64 downscaled grayscale copy of the bitmap.
-     *
-     * - Very low variance (< 200)               → Plain (P)
-     * - High horizontal edge ratio (> 0.25)     → Striped (ST)
-     * - High both-axis edge ratio (> 0.3 each)  → Checkered (CH)
-     * - High variance (> 1500), no structure    → Graphic (GR)
-     * - Default                                 → Plain (P)
      */
     fun detectPattern(bitmap: Bitmap): String {
         val scale = 64
         val small = Bitmap.createScaledBitmap(bitmap, scale, scale, true)
-
         val pixels = Array(scale) { y ->
             IntArray(scale) { x ->
                 val p = small.getPixel(x, y)
                 (Color.red(p) + Color.green(p) + Color.blue(p)) / 3
             }
         }
-
         val flat     = pixels.flatMap { it.toList() }
         val mean     = flat.average()
         val variance = flat.map { (it - mean) * (it - mean) }.average()
-
         if (variance < 200) return "P"
 
         var hEdges = 0
-        for (y in 1 until scale) {
-            for (x in 0 until scale) {
-                if (Math.abs(pixels[y][x] - pixels[y - 1][x]) > 30) hEdges++
-            }
-        }
+        for (y in 1 until scale) for (x in 0 until scale) if (Math.abs(pixels[y][x] - pixels[y-1][x]) > 30) hEdges++
         var vEdges = 0
-        for (y in 0 until scale) {
-            for (x in 1 until scale) {
-                if (Math.abs(pixels[y][x] - pixels[y][x - 1]) > 30) vEdges++
-            }
-        }
+        for (y in 0 until scale) for (x in 1 until scale) if (Math.abs(pixels[y][x] - pixels[y][x-1]) > 30) vEdges++
 
-        val total      = (scale * scale).toFloat()
-        val hEdgeRatio = hEdges / total
-        val vEdgeRatio = vEdges / total
-
+        val total = (scale * scale).toFloat()
         return when {
-            hEdgeRatio > 0.3f && vEdgeRatio > 0.3f -> "CH"
-            hEdgeRatio > 0.25f                      -> "ST"
-            vEdgeRatio > 0.25f                      -> "ST"
-            variance > 1500                         -> "GR"
-            else                                    -> "P"
+            hEdges / total > 0.3f && vEdges / total > 0.3f -> "CH"
+            hEdges / total > 0.25f                         -> "ST"
+            vEdges / total > 0.25f                         -> "ST"
+            variance > 1500                                -> "GR"
+            else                                           -> "P"
         }
     }
 }
