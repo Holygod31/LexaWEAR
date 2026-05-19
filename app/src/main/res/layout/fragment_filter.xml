@@ -1,4 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
+
+<!--
+    fragment_filter.xml — Filter tab layout (FilterFragment).
+
+    Structure:
+      LinearLayout (vertical, full height)
+        ├─ TextView (title)                     ← static heading
+        ├─ ScrollView (weight=1)                ← scrollable carousel area
+        │    └─ LinearLayout (vertical, padding=16dp)
+        │         ├─ [label + carousel] × 4    ← Type / Colour / Season / Formality
+        │         │   Each carousel row:
+        │         │     Button (◀ prev, 72dp) | TextView (value, weight=1) | Button (▶ next, 72dp)
+        └─ LinearLayout (action row)            ← Clear and Apply buttons, pinned at bottom
+
+    Each carousel value TextView uses accessibilityLiveRegion="polite" so TalkBack
+    announces the new option name each time the user taps prev/next, without
+    requiring the user to navigate focus back to the display label.
+
+    Apply and Clear are outside the ScrollView so they stay pinned at the bottom
+    regardless of how many carousels are visible above.
+
+    Carousel button IDs follow the pattern btn_{axis}_{prev|next} — these IDs
+    are referenced directly in TutorialManager.allButtonIds (steps 12–14).
+-->
+
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -6,7 +31,7 @@
     android:orientation="vertical"
     android:background="?android:attr/colorBackground">
 
-    <!-- Title -->
+    <!-- Static screen title -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -16,6 +41,7 @@
         android:textColor="?attr/colorOnBackground"
         android:layout_margin="16dp" />
 
+    <!-- Scrollable carousel area — weight=1 fills space above the action row -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -27,7 +53,7 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Type carousel -->
+            <!-- ── Type carousel ──────────────────────────────────────────── -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -37,6 +63,11 @@
                 android:textColor="?attr/colorOnBackground"
                 android:layout_marginBottom="8dp" />
 
+            <!--
+                Carousel row: ◀ (72dp fixed) | value label (weight=1) | ▶ (72dp fixed).
+                72dp buttons meet minimum accessible touch target size.
+                tv_type_value is updated by FilterFragment.setupCarousel() on each tap.
+            -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="72dp"
@@ -53,6 +84,10 @@
                     android:padding="0dp"
                     android:contentDescription="@string/btn_prev_type" />
 
+                <!--
+                    Current type value — accessibilityLiveRegion="polite" announces
+                    each new option to TalkBack when prev/next is tapped.
+                -->
                 <TextView
                     android:id="@+id/tv_type_value"
                     android:layout_width="0dp"
@@ -76,7 +111,7 @@
 
             </LinearLayout>
 
-            <!-- Color carousel -->
+            <!-- ── Colour carousel ────────────────────────────────────────── -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -86,6 +121,7 @@
                 android:textColor="?attr/colorOnBackground"
                 android:layout_marginBottom="8dp" />
 
+            <!-- Carousel row — same structure as Type; see Type carousel comment above -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="72dp"
@@ -125,7 +161,7 @@
 
             </LinearLayout>
 
-            <!-- Season carousel -->
+            <!-- ── Season carousel ────────────────────────────────────────── -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -135,6 +171,7 @@
                 android:textColor="?attr/colorOnBackground"
                 android:layout_marginBottom="8dp" />
 
+            <!-- Carousel row — same structure as Type; see Type carousel comment above -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="72dp"
@@ -174,7 +211,7 @@
 
             </LinearLayout>
 
-            <!-- Formality carousel -->
+            <!-- ── Formality carousel ─────────────────────────────────────── -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -184,6 +221,7 @@
                 android:textColor="?attr/colorOnBackground"
                 android:layout_marginBottom="8dp" />
 
+            <!-- Carousel row — same structure as Type; see Type carousel comment above -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="72dp"
@@ -226,7 +264,13 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- Apply / Clear buttons -->
+    <!--
+        Action row — pinned at bottom, outside ScrollView.
+        Clear resets all four axes to index 0 ("no filter").
+        Apply passes current codes to MainActivity.applyFiltersFromFilter().
+        Both buttons share the row width equally (weight=1 each).
+        Height 72dp matches minimum accessible touch target size.
+    -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

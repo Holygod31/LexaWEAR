@@ -8,6 +8,18 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 
+/**
+ * FilterFragment — four-axis carousel filter UI for the wardrobe list.
+ *
+ * Each axis (type / colour / season / formality) is a horizontally scrollable
+ * carousel of option buttons. Selecting Apply delegates to
+ * [MainActivity.applyFiltersFromFilter], which forwards the chosen codes to
+ * [WardrobeFragment.applyFilters] and navigates back.
+ *
+ * Filter state can be injected before or after the view is inflated via
+ * [restoreFilters]. Codes received before attach are held as pending and
+ * resolved to list indices in [onCreateView].
+ */
 class FilterFragment : Fragment() {
 
     private lateinit var tvTypeValue: TextView
@@ -15,7 +27,12 @@ class FilterFragment : Fragment() {
     private lateinit var tvSeasonValue: TextView
     private lateinit var tvFormalityValue: TextView
 
+    /** A single carousel entry: language-neutral [code] and localised [label]. */
     private data class Option(val code: String, val label: String)
+
+    // All option lists use `get()` properties so getString() is called after
+    // fragment attach, not at class initialisation time when context is unavailable.
+    // Empty string code means "no filter on this axis" (show all).
 
     private val typeOptions get() = listOf(
         Option("",   getString(R.string.filter_all_types)),
@@ -61,6 +78,8 @@ class FilterFragment : Fragment() {
         Option("SU", getString(R.string.season_summer)),
         Option("A",  getString(R.string.season_autumn)),
         Option("W",  getString(R.string.season_winter))
+        // Note: "All seasons" (AS) is not listed as a filter target — items tagged AS
+        // always pass any season filter in WardrobeFragment.applyFilters.
     )
 
     private val formalityOptions get() = listOf(
@@ -75,18 +94,24 @@ class FilterFragment : Fragment() {
         Option("L",  getString(R.string.formality_lounge))
     )
 
+    // Current carousel positions — index 0 always means "no filter" for every axis.
     private var typeIndex      = 0
     private var colorIndex     = 0
     private var seasonIndex    = 0
     private var formalityIndex = 0
 
-    // Pending codes stored by restoreFilters() if called before onCreateView.
-    // Resolved to indices in onCreateView once getString() is safe to call.
+    // ── Pending restore ───────────────────────────────────────────────────────
+    // restoreFilters() may be called before onCreateView (e.g. when the tab is
+    // first opened). Codes are held here and resolved to indices in onCreateView
+    // once getString() is safe to use.
+
     private var pendingTypeCode      = ""
     private var pendingColorCode     = ""
     private var pendingSeasonCode    = ""
     private var pendingFormalityCode = ""
-    private var hasPendingRestore    = false
+
+    /** True if [restoreFilters] was called but [applyPendingRestore] hasn't run yet. */
+    private var hasPendingRestore = false
 
     /**
      * Called by MainActivity to restore active filter state when the tab is
@@ -109,7 +134,11 @@ class FilterFragment : Fragment() {
         if (isAdded) applyPendingRestore()
     }
 
-    /** Resolves stored codes to list indices. Only safe to call after attach. */
+    /**
+     * Resolves stored codes to list indices and clears [hasPendingRestore].
+     * Only safe to call after attach — requires getString() via option lists.
+     * Unrecognised codes (e.g. from a future format) fall back to index 0 (no filter).
+     */
     private fun applyPendingRestore() {
         typeIndex      = typeOptions.indexOfFirst {
             it.code.equals(pendingTypeCode, ignoreCase = true)
@@ -146,6 +175,7 @@ class FilterFragment : Fragment() {
 
         updateAllDisplays()
 
+        // Wire up each carousel axis: prev/next buttons wrap around at list boundaries.
         setupCarousel(
             view.findViewById(R.id.btn_type_prev),
             view.findViewById(R.id.btn_type_next),
@@ -175,6 +205,7 @@ class FilterFragment : Fragment() {
         ) { formalityIndex = it }
 
         view.findViewById<Button>(R.id.btn_filter_apply).setOnClickListener {
+            // Pass current codes to MainActivity, which forwards them to WardrobeFragment.
             (activity as? MainActivity)?.applyFiltersFromFilter(
                 typeOptions[typeIndex].code,
                 colorOptions[colorIndex].code,
@@ -184,6 +215,7 @@ class FilterFragment : Fragment() {
         }
 
         view.findViewById<Button>(R.id.btn_filter_clear).setOnClickListener {
+            // Reset all indices to 0 (the "all / no filter" entry on each axis).
             typeIndex = 0; colorIndex = 0; seasonIndex = 0; formalityIndex = 0
             updateAllDisplays()
             (activity as? MainActivity)?.applyFiltersFromFilter("", "", "", "")
@@ -192,6 +224,14 @@ class FilterFragment : Fragment() {
         return view
     }
 
+    /**
+     * Wires prev/next buttons for a single carousel axis.
+     * Wraps around at both ends (prev from index 0 → last; next from last → 0).
+     * Each navigation step announces the new label for TalkBack.
+     *
+     * @param getIndex lambda returning the current index (read from fragment state)
+     * @param setIndex lambda writing the updated index (back to fragment state)
+     */
     private fun setupCarousel(
         btnPrev: Button,
         btnNext: Button,
@@ -203,6 +243,7 @@ class FilterFragment : Fragment() {
         tvValue.text = options[getIndex()].label
 
         btnPrev.setOnClickListener {
+            // Wrap around to last option when stepping back from index 0.
             val newIndex = if (getIndex() == 0) options.size - 1 else getIndex() - 1
             setIndex(newIndex)
             tvValue.text = options[newIndex].label
@@ -210,6 +251,7 @@ class FilterFragment : Fragment() {
         }
 
         btnNext.setOnClickListener {
+            // Modulo wrap-around to first option after the last.
             val newIndex = (getIndex() + 1) % options.size
             setIndex(newIndex)
             tvValue.text = options[newIndex].label
@@ -217,8 +259,13 @@ class FilterFragment : Fragment() {
         }
     }
 
+    /**
+     * Refreshes all four carousel display TextViews from current indices.
+     * Guard on [tvTypeValue] initialisation prevents crash if called before
+     * [onCreateView] binds views (e.g. from [applyPendingRestore] on first open).
+     */
     private fun updateAllDisplays() {
-        if (!::tvTypeValue.isInitialized) return
+        if (!::tvTypeValue.isInitialized) return  // called before view binding — safe no-op
         tvTypeValue.text      = typeOptions[typeIndex].label
         tvColorValue.text     = colorOptions[colorIndex].label
         tvSeasonValue.text    = seasonOptions[seasonIndex].label

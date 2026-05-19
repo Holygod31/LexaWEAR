@@ -1,4 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+
+<!--
+    colors.xml — Base colour resource definitions for MaterialTheme.
+
+    Only the two theme primitives (black, white) are defined here.
+    All app colours are defined as hex values directly in ColorPalette.kt,
+    which is the single source of truth for the LexaWEAR palette.
+    Theme surface, primary, and control colours are resolved via
+    ?attr/colorSurface, ?attr/colorPrimary etc. in drawable and layout files.
+-->
+
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>

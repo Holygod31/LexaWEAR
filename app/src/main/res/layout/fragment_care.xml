@@ -1,4 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
+
+<!--
+    fragment_care.xml — Scan tab layout (CareFragment).
+
+    Structure:
+      LinearLayout (vertical, full height)
+        └─ ScrollView (weight=1)               ← scrollable content area
+             └─ LinearLayout (vertical)
+                  ├─ TextView (title)           ← static heading
+                  ├─ TextView (tv_care_status)  ← live status / instructions
+                  ├─ TextView (tv_legacy_banner)← shown when tag has unrecognised codes
+                  └─ LinearLayout (layout_care_results) ← dynamically built card list
+        ├─ Button (btn_add_to_wardrobe)         ← hidden until tag is scanned or tutorial
+        └─ Button (btn_camera_care)             ← always visible; opens CameraFragment
+
+    Buttons are outside the ScrollView so they stay pinned at the bottom
+    regardless of how many result cards are shown above.
+-->
+
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -6,6 +25,7 @@
     android:orientation="vertical"
     android:background="?android:attr/colorBackground">
 
+    <!-- Scrollable content: status, legacy banner, result cards -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -17,7 +37,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Title -->
+            <!-- Static screen title — not in the accessibility live region -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -27,7 +47,11 @@
                 android:textColor="?attr/colorOnBackground"
                 android:layout_marginBottom="12dp" />
 
-            <!-- Status -->
+            <!--
+                Live status line — updated by CareFragment.updateStatus().
+                accessibilityLiveRegion="polite" announces changes via TalkBack
+                without interrupting any currently-speaking utterance.
+            -->
             <TextView
                 android:id="@+id/tv_care_status"
                 android:layout_width="match_parent"
@@ -41,7 +65,12 @@
                 android:layout_marginBottom="16dp"
                 android:accessibilityLiveRegion="polite" />
 
-            <!-- Legacy tag warning banner -->
+            <!--
+                Legacy tag warning banner — visible="gone" by default.
+                Made visible by CareFragment.displayCareInfo() when any decoded
+                field returns isLegacy=true. Text is set programmatically.
+                accessibilityLiveRegion="polite" so TalkBack announces it on appear.
+            -->
             <TextView
                 android:id="@+id/tv_legacy_banner"
                 android:layout_width="match_parent"
@@ -54,7 +83,11 @@
                 android:visibility="gone"
                 android:accessibilityLiveRegion="polite" />
 
-            <!-- Care info cards -->
+            <!--
+                Result card container — visibility="gone" until a tag is scanned
+                or camera results arrive. Cards are inflated and added dynamically
+                by CareFragment.displayCareInfo(); do not add static children here.
+            -->
             <LinearLayout
                 android:id="@+id/layout_care_results"
                 android:layout_width="match_parent"
@@ -65,7 +98,11 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- Add to wardrobe button -->
+    <!--
+        "Add to Wardrobe" — visibility="gone" until a successful tag scan or
+        tutorial step 2 (CareFragment.showAddToWardrobeForTutorial()).
+        Height 72dp matches the minimum accessible touch target size.
+    -->
     <Button
         android:id="@+id/btn_add_to_wardrobe"
         android:layout_width="match_parent"
@@ -78,7 +115,7 @@
         android:visibility="gone"
         android:contentDescription="@string/btn_add_to_wardrobe_description" />
 
-    <!-- Camera button -->
+    <!-- Camera button — always visible; opens CameraFragment in Source.CARE mode -->
     <Button
         android:id="@+id/btn_camera_care"
         android:layout_width="match_parent"

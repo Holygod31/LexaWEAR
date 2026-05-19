@@ -16,7 +16,7 @@ import java.nio.channels.FileChannel
  * Until the model file exists, all calls return an empty result silently.
  *
  * Expected model:
- *  - Input:  [1, 224, 224, 3] float32 normalized RGB bitmap
+ *  - Input:  [1, 224, 224, 3] float32 normalised RGB bitmap
  *  - Output: [1, N] float32 confidence scores for N symbol classes
  *
  * Symbol classes (index → label) must match the order the model was trained on.
@@ -36,8 +36,14 @@ class CareSymbolClassifier(private val context: Context) {
         private const val INPUT_SIZE = 224
         private const val CONFIDENCE_THRESHOLD = 0.6f
 
-        // Update this list to match your trained model's class order exactly.
-        // Format: label → (fieldKey, fieldCode)
+        /**
+         * Maps symbol label names to their LexaWEAR (fieldKey, fieldCode) pairs.
+         *
+         * ⚠ CRITICAL: [LABELS] is derived from this map's key order. The order
+         * here must match your trained model's class output order exactly.
+         * A mismatch causes silent wrong-field predictions with no error.
+         * Update after training — see `docs/care_symbols_training.md`.
+         */
         val SYMBOL_TO_FIELD = mapOf(
             "wash_30"          to Pair("W", "30"),
             "wash_40"          to Pair("W", "40"),
@@ -58,31 +64,46 @@ class CareSymbolClassifier(private val context: Context) {
             "dryclean_none"    to Pair("C", "0")
         )
 
+        /**
+         * Class labels in the order the model outputs them.
+         * Derived from [SYMBOL_TO_FIELD] key order — do not define separately.
+         * Index N here must correspond to output index N in the model.
+         */
         val LABELS = SYMBOL_TO_FIELD.keys.toList()
     }
 
     private var interpreter: Interpreter? = null
+
+    /** True when the model file was found and loaded successfully. */
     val isAvailable: Boolean get() = interpreter != null
 
     init {
         loadModel()
     }
 
+    /**
+     * Loads [MODEL_FILE] from assets if present.
+     * Fails silently if the file is absent — expected state before model is trained.
+     */
     private fun loadModel() {
         try {
             val assetManager = context.assets
-            // Check if model file exists before trying to load
+            // Check existence before opening to avoid a noisy FileNotFoundException.
             val files = assetManager.list("") ?: return
             if (MODEL_FILE !in files) return
 
             val modelBuffer = loadModelFile()
             interpreter = Interpreter(modelBuffer)
         } catch (e: Exception) {
-            // Model not available — silently degrade
+            // Silently degrade — app functions without the care symbol model.
             interpreter = null
         }
     }
 
+    /**
+     * Memory-maps [MODEL_FILE] from assets for zero-copy loading into the interpreter.
+     * Only called after confirming the file exists in [loadModel].
+     */
     private fun loadModelFile(): MappedByteBuffer {
         val fileDescriptor = context.assets.openFd(MODEL_FILE)
         val inputStream = FileInputStream(fileDescriptor.fileDescriptor)
@@ -95,10 +116,12 @@ class CareSymbolClassifier(private val context: Context) {
     }
 
     /**
-     * Classify care symbols in a bitmap.
-     * Returns a map of fieldKey → fieldCode for all detected symbols
-     * above the confidence threshold.
-     * Returns empty map if model is unavailable or confidence is too low.
+     * Classifies care symbols in [bitmap] and returns a fieldKey → fieldCode map.
+     *
+     * Only symbols with confidence ≥ [CONFIDENCE_THRESHOLD] are included.
+     * When multiple symbols map to the same field (e.g. two wash symbols), the
+     * first one (lowest index) wins — output is iterated in index order.
+     * Returns an empty map if the model is unavailable or all scores are too low.
      */
     fun classify(bitmap: Bitmap): Map<String, String> {
         val interp = interpreter ?: return emptyMap()
@@ -106,21 +129,21 @@ class CareSymbolClassifier(private val context: Context) {
 
         return try {
             val resized = Bitmap.createScaledBitmap(bitmap, INPUT_SIZE, INPUT_SIZE, true)
-            val input = bitmapToFloatArray(resized)
-            val output = Array(1) { FloatArray(LABELS.size) }
+            val input   = bitmapToFloatArray(resized)
+            // Output shape: [1, LABELS.size] — one probability per class.
+            val output  = Array(1) { FloatArray(LABELS.size) }
 
             interp.run(input, output)
 
             val results = mutableMapOf<String, String>()
             output[0].forEachIndexed { index, confidence ->
                 if (confidence >= CONFIDENCE_THRESHOLD && index < LABELS.size) {
-                    val label = LABELS[index]
+                    val label     = LABELS[index]
                     val fieldPair = SYMBOL_TO_FIELD[label]
                     if (fieldPair != null) {
-                        // Only set if not already set by a higher-confidence symbol
-                        // for the same field
-                        val existing = results[fieldPair.first]
-                        if (existing == null) {
+                        // First-wins per field: if a field is already set by an earlier
+                        // (lower-index) symbol, the later one is ignored.
+                        if (results[fieldPair.first] == null) {
                             results[fieldPair.first] = fieldPair.second
                         }
                     }
@@ -128,13 +151,14 @@ class CareSymbolClassifier(private val context: Context) {
             }
             results
         } catch (e: Exception) {
-            emptyMap()
+            emptyMap()  // Inference error — degrade gracefully
         }
     }
 
     /**
-     * Convert bitmap to normalized float array [1, H, W, 3].
-     * Pixel values normalized to [0, 1].
+     * Converts a [Bitmap] to the [1, H, W, 3] float array format expected by the model.
+     * Pixel values normalised to [0.0, 1.0]. Channel order: R, G, B — must match
+     * the channel order used during model training.
      */
     private fun bitmapToFloatArray(bitmap: Bitmap): Array<Array<Array<FloatArray>>> {
         val result = Array(1) { Array(INPUT_SIZE) { Array(INPUT_SIZE) { FloatArray(3) } } }
@@ -149,6 +173,7 @@ class CareSymbolClassifier(private val context: Context) {
         return result
     }
 
+    /** Releases the TFLite interpreter; call from the hosting fragment's onDestroyView. */
     fun close() {
         interpreter?.close()
         interpreter = null

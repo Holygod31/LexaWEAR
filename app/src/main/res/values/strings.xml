@@ -1,14 +1,15 @@
 <resources>
     <string name="app_name">LexaWEAR</string>
 
-    <!-- Settings -->
+    <!-- ── Settings ───────────────────────────────────────────────────────── -->
     <string name="settings">Settings</string>
     <string name="settings_content_description">Settings. Double tap to open settings.</string>
     <string name="settings_replay_tutorial">Replay tutorial</string>
     <string name="settings_close">Close</string>
     <string name="settings_select_language">Select language</string>
 
-    <!-- Bottom nav -->
+    <!-- ── Bottom navigation tabs ─────────────────────────────────────────── -->
+    <!-- Tab IDs must match R.id.tab_* in bottom_nav_menu.xml and TutorialManager -->
     <string name="tab_write">Write</string>
     <string name="tab_write_description">Write tab - write clothing info to a tag</string>
     <string name="tab_scan">Scan</string>
@@ -16,7 +17,8 @@
     <string name="tab_wardrobe">Wardrobe</string>
     <string name="tab_wardrobe_description">Wardrobe tab - manage your clothing items</string>
 
-    <!-- NFC / device status -->
+    <!-- ── NFC / device status ────────────────────────────────────────────── -->
+    <!-- Shared across CareFragment, NfcFragment, and WardrobeFragment -->
     <string name="nfc_not_supported">This device does not support NFC.</string>
     <string name="nfc_disabled">NFC is off. Please enable it in Settings.</string>
     <string name="tag_empty_write">Tag is empty. Use the Write tab to add clothing info.</string>
@@ -27,9 +29,10 @@
     <string name="tag_cannot_write">This tag cannot be written to.</string>
     <string name="tag_written_success">Tag written successfully!</string>
 
-    <!-- Care fragment -->
+    <!-- ── Care fragment ──────────────────────────────────────────────────── -->
     <string name="care_title">Care Instructions</string>
     <string name="care_status_default">Hold your phone to a clothing tag.</string>
+    <!-- Legacy warning: shown when any decoded field returns isLegacy=true -->
     <string name="care_legacy_warning">⚠ Old format detected. Consider rewriting this tag.</string>
     <string name="care_legacy_warning_description">Warning. Old tag format detected. Consider rewriting this tag.</string>
     <string name="care_no_data">No care data found on this tag.</string>
@@ -37,11 +40,12 @@
     <string name="care_camera_results_status">Camera results shown. Scan a tag to get full care info.</string>
     <string name="btn_add_to_wardrobe">Add to Wardrobe</string>
     <string name="btn_add_to_wardrobe_description">Add this clothing item to your wardrobe</string>
+    <!-- %s = item name; set programmatically after tag scan -->
     <string name="btn_add_named_description">Add %s to wardrobe</string>
     <string name="btn_camera_care">📷  Scan Care Label</string>
     <string name="btn_camera_care_description">Open camera to scan care label symbols and text</string>
 
-    <!-- Write (NFC) fragment -->
+    <!-- ── Write (NFC) fragment ───────────────────────────────────────────── -->
     <string name="write_title">Write Tag</string>
     <string name="write_status_default">Let\'s tag a clothing item.</string>
     <string name="write_status_scan_or_answer">Scan a tag to edit it, or answer each question to write a new one.</string>
@@ -54,6 +58,7 @@
     <string name="write_tag_empty_answer">Tag is empty. Answer each question to write a new one.</string>
     <string name="write_tag_loaded">Tag loaded. Edit any field, then tap Write to Tag.</string>
     <string name="write_tag_loaded_accessibility">Tag loaded for editing.</string>
+    <!-- %1$d = current step, %2$d = total steps (14). Update total if steps change. -->
     <string name="step_indicator">Step %1$d of %2$d</string>
     <string name="btn_back">Back</string>
     <string name="btn_back_description">Go back to previous field</string>
@@ -79,11 +84,13 @@
     <string name="dialog_tag_found_load_discard">Load this tag for editing? This will discard your current progress.</string>
     <string name="dialog_load">Load</string>
 
-    <!-- Option buttons -->
+    <!-- ── Option buttons ────────────────────────────────────────────────── -->
+    <!-- option_selected appended to contentDescription of the active button -->
     <string name="option_selected">Selected</string>
     <string name="you_said">You said:</string>
 
-    <!-- Size step -->
+    <!-- ── Size step ──────────────────────────────────────────────────────── -->
+    <!-- Full label strings shown in the size carousel buttons -->
     <string name="size_xs">Extra Small (XS)</string>
     <string name="size_s">Small (S)</string>
     <string name="size_m">Medium (M)</string>
@@ -92,13 +99,15 @@
     <string name="size_xxl">Double Extra Large (XXL)</string>
     <string name="size_xxxl">Triple Extra Large (XXXL)</string>
     <string name="size_custom">Enter custom size (e.g. 32/32)</string>
+    <!-- Announced by TalkBack when custom size entry field receives focus -->
     <string name="size_custom_prompt">Type your size. For trousers, use format 32 slash 32.</string>
     <string name="write_error_size_empty">Please type a size or go back and choose from the list.</string>
     <string name="write_error_name_required">Please enter a name for this item.</string>
 
-    <!-- Wardrobe fragment -->
+    <!-- ── Wardrobe fragment ──────────────────────────────────────────────── -->
     <string name="wardrobe_title">Wardrobe</string>
     <string name="wardrobe_status_default">Scan a tag to add an item.</string>
+    <!-- %d = total item count -->
     <string name="wardrobe_status_count">%d item(s) in wardrobe.</string>
     <string name="wardrobe_status_count_scan">%d item(s) in wardrobe. Scan a tag to add.</string>
     <string name="wardrobe_status_shown">%d item(s) shown.</string>
@@ -106,13 +115,16 @@
     <string name="wardrobe_status_hold_tag_accessibility">Hold your phone to a clothing tag to add it to your wardrobe.</string>
     <string name="wardrobe_tag_empty">Tag is empty or unreadable.</string>
     <string name="wardrobe_tag_write_first">Tag is empty. Write to it first using the Write tab.</string>
+    <!-- %d = number of legacy items -->
     <string name="wardrobe_legacy_banner">⚠ %d item(s) use the old format. Consider rewriting them.</string>
     <string name="wardrobe_legacy_banner_description">Warning. ⚠ %d item(s) use the old format. Consider rewriting them.</string>
     <string name="wardrobe_no_filters">No filters active</string>
+    <!-- %s = comma-joined decoded filter names e.g. "Jacket, Blue" -->
     <string name="wardrobe_active_filters">Filters: %s</string>
     <string name="wardrobe_unknown_item">Unknown Item</string>
     <string name="wardrobe_legacy_rewrite">⚠ Old format. Rewriting this tag is recommended.</string>
     <string name="wardrobe_items_shown">%d items shown.</string>
+    <!-- item_double_tap used in WardrobeAdapter row contentDescription -->
     <string name="item_double_tap">Double tap for details.</string>
     <string name="item_hint_edit_delete">Double tap to edit or delete</string>
     <string name="btn_filters">Filters</string>
@@ -122,6 +134,7 @@
     <string name="btn_scan_tag_description">Scan NFC tag to add clothing item to wardrobe</string>
     <string name="dialog_add_wardrobe_title">Add to Wardrobe?</string>
     <string name="dialog_add">Add</string>
+    <!-- %s = item name -->
     <string name="dialog_item_added_accessibility">%s added to wardrobe.</string>
     <string name="dialog_item_removed_accessibility">%s removed from wardrobe.</string>
     <string name="dialog_delete_title">Delete Item</string>
@@ -129,14 +142,16 @@
     <string name="dialog_delete_confirm">Delete</string>
     <string name="dialog_close">Close</string>
     <string name="voice_filter_prompt">Describe what you\'re looking for</string>
+    <!-- %s = size code or value e.g. "M", "32/34" -->
     <string name="size_label">Size %s</string>
 
-    <!-- Filter fragment -->
+    <!-- ── Filter fragment ────────────────────────────────────────────────── -->
     <string name="filter_title">Filters</string>
     <string name="filter_type_label">Type</string>
     <string name="filter_color_label">Color</string>
     <string name="filter_season_label">Season</string>
     <string name="filter_formality_label">Formality</string>
+    <!-- "All X" options always map to empty-string code — no filter on that axis -->
     <string name="filter_all_types">All Types</string>
     <string name="filter_all_colors">All Colors</string>
     <string name="filter_all_seasons">All Seasons</string>
@@ -145,6 +160,7 @@
     <string name="btn_filter_apply_description">Apply filters and return to wardrobe</string>
     <string name="btn_filter_clear">Clear</string>
     <string name="btn_filter_clear_description">Clear all filters</string>
+    <!-- contentDescriptions for carousel prev/next buttons — read by TalkBack on tap -->
     <string name="btn_prev_type">Previous type</string>
     <string name="btn_next_type">Next type</string>
     <string name="btn_prev_color">Previous color</string>
@@ -154,7 +170,8 @@
     <string name="btn_prev_formality">Previous formality</string>
     <string name="btn_next_formality">Next formality</string>
 
-    <!-- Field labels -->
+    <!-- ── Field labels ───────────────────────────────────────────────────── -->
+    <!-- Used in summary screens, result cards, and decoded value displays -->
     <string name="field_item">Item</string>
     <string name="field_type">Type</string>
     <string name="field_color">Color</string>
@@ -170,7 +187,8 @@
     <string name="field_dry_clean">Dry Clean</string>
     <string name="field_notes">Notes</string>
 
-    <!-- Decoded values -->
+    <!-- ── Decoded care values ────────────────────────────────────────────── -->
+    <!-- These strings are the display forms of the language-neutral codes stored on tags -->
     <string name="wash_30">Wash at 30°</string>
     <string name="wash_40">Wash at 40°</string>
     <string name="wash_60">Wash at 60°</string>
@@ -188,7 +206,8 @@
     <string name="no">No</string>
     <string name="one_size">One Size</string>
 
-    <!-- Clothing types -->
+    <!-- ── Clothing types ─────────────────────────────────────────────────── -->
+    <!-- Display names for language-neutral type codes (SH, TS, JK…) stored on tags -->
     <string name="type_shirt">Shirt</string>
     <string name="type_tshirt">T-Shirt</string>
     <string name="type_jacket">Jacket</string>
@@ -206,7 +225,8 @@
     <string name="type_skirt">Skirt</string>
     <string name="type_socks">Socks</string>
 
-    <!-- Patterns -->
+    <!-- ── Patterns ───────────────────────────────────────────────────────── -->
+    <!-- Display names for language-neutral pattern codes (P, ST, CH…) stored on tags -->
     <string name="pattern_plain">Plain</string>
     <string name="pattern_striped">Striped</string>
     <string name="pattern_checkered">Checkered</string>
@@ -217,7 +237,12 @@
     <string name="pattern_camouflage">Camouflage</string>
     <string name="pattern_animal">Animal Print</string>
 
-    <!-- Colours — full 40+ palette -->
+    <!-- ── Colours ────────────────────────────────────────────────────────── -->
+    <!--
+        Display names for ColorPalette entries (45 colours).
+        Order here does not need to match ColorPalette.entries —
+        entries are looked up by R.string reference, not by position.
+    -->
     <string name="color_dark_red">Dark Red</string>
     <string name="color_red">Red</string>
     <string name="color_crimson">Crimson</string>
@@ -263,7 +288,8 @@
     <string name="color_black">Black</string>
     <string name="color_multicolor">Multicolor</string>
 
-    <!-- Formality -->
+    <!-- ── Formality ──────────────────────────────────────────────────────── -->
+    <!-- Display names for formality codes (C, B, F, S, L, SC, BC, SF) -->
     <string name="formality_casual">Casual</string>
     <string name="formality_business">Business</string>
     <string name="formality_formal">Formal</string>
@@ -273,14 +299,16 @@
     <string name="formality_business_casual">Business Casual</string>
     <string name="formality_smart_formal">Smart Formal</string>
 
-    <!-- Seasons -->
+    <!-- ── Seasons ────────────────────────────────────────────────────────── -->
+    <!-- Display names for season codes (W, SP, SU, A, AS) -->
     <string name="season_winter">Winter</string>
     <string name="season_spring">Spring</string>
     <string name="season_summer">Summer</string>
     <string name="season_autumn">Autumn</string>
     <string name="season_all">All-Season</string>
 
-    <!-- Write step questions -->
+    <!-- ── Write step questions ───────────────────────────────────────────── -->
+    <!-- Shown in tv_question; announced by TalkBack on each step change -->
     <string name="step_q_name">What is this item called?</string>
     <string name="step_q_type">What type of clothing is this?</string>
     <string name="step_q_color">What color is it?</string>
@@ -296,7 +324,8 @@
     <string name="step_q_dry_clean">Can it be dry cleaned?</string>
     <string name="step_q_notes">Any extra notes?</string>
 
-    <!-- Write step hints -->
+    <!-- ── Write step hints ───────────────────────────────────────────────── -->
+    <!-- Shown as EditText hints for free-text steps; not announced by TalkBack -->
     <string name="step_h_name">e.g. Blue Winter Jacket</string>
     <string name="step_h_type">Choose from the list below</string>
     <string name="step_h_color">Choose from the list below</string>
@@ -312,7 +341,7 @@
     <string name="step_h_dry_clean">Choose Yes or No</string>
     <string name="step_h_notes">e.g. Goes well with black pants</string>
 
-    <!-- Camera fragment -->
+    <!-- ── Camera fragment ───────────────────────────────────────────────── -->
     <string name="camera_permission_required">Camera permission is required for this feature.</string>
     <string name="camera_overlay_live_description">Live recognition results</string>
     <string name="camera_mode_current_description">Current camera mode</string>
@@ -338,6 +367,7 @@
     <string name="camera_analyzing">Analyzing…</string>
     <string name="camera_nothing_recognized">Nothing recognized. Try again or adjust the angle.</string>
     <string name="camera_nothing_recognized_accessibility">Nothing recognized. Try adjusting the angle.</string>
+    <!-- %1$s=type name, %2$d=confidence%, %3$s=colour name -->
     <string name="camera_detected_status">%1$s detected (%2$d%% confidence). %3$s</string>
     <string name="camera_detected_accessibility">%1$s detected. %2$s</string>
     <string name="camera_mode_label_care">Care label</string>
@@ -347,18 +377,22 @@
     <string name="camera_btn_retake">Retake</string>
     <string name="camera_btn_retake_description">Retake the photo</string>
     <string name="camera_ready">Ready. Tap Capture when ready.</string>
+    <!-- %1$s=type name, %2$d=confidence% — announced by TalkBack after capture -->
     <string name="camera_type_detected">%1$s detected at %2$d percent confidence.</string>
+    <!-- %s=colour name -->
     <string name="camera_color_detected">Color detected: %s.</string>
     <string name="camera_type_low_confidence">Item type unclear — please select it manually.</string>
 
-    <!-- Vision analyzer -->
+    <!-- ── Vision analyzer ───────────────────────────────────────────────── -->
     <string name="vision_analyzing">Analyzing…</string>
 
-    <!-- Tutorial — UI chrome -->
+    <!-- ── Tutorial UI chrome ─────────────────────────────────────────────── -->
+    <!-- "Got it" for info-only steps (no target); "Skip" when a target button exists -->
     <string name="tutorial_got_it">Got it</string>
     <string name="tutorial_skip">Skip</string>
     <string name="tutorial_got_it_description">Got it. Double tap to go to next step.</string>
     <string name="tutorial_skip_description">Skip this step. Double tap to continue.</string>
+    <!-- Appended to the TalkBack announcement: "Skip button below." -->
     <string name="tutorial_button_below"> button below.</string>
     <string name="tutorial_complete_title">You\'re all set!</string>
     <string name="tutorial_complete_body">You now know the full layout of LexaWEAR. Replay this tutorial anytime from the Settings button at the top.</string>
@@ -366,7 +400,12 @@
     <string name="tutorial_complete_btn_description">Start using LexaWEAR. Double tap to close tutorial.</string>
     <string name="tutorial_complete_announcement">Tutorial complete. You\'re all set! You can replay this tutorial anytime from the Settings button.</string>
 
-    <!-- Tutorial — step titles -->
+    <!-- ── Tutorial step titles ───────────────────────────────────────────── -->
+    <!--
+        15 steps total. If steps are added or removed, update all title strings
+        AND the step count in TutorialManager (currently hardcoded as 15 in
+        tutorial_title_N strings and checked against steps.size at runtime).
+    -->
     <string name="tutorial_title_1">1 of 15 — Care Tab</string>
     <string name="tutorial_title_2">2 of 15 — Add to Wardrobe</string>
     <string name="tutorial_title_3">3 of 15 — Write Tab</string>
@@ -383,7 +422,8 @@
     <string name="tutorial_title_14">14 of 15 — Clear Filters</string>
     <string name="tutorial_title_15">15 of 15 — Done</string>
 
-    <!-- Tutorial — step descriptions -->
+    <!-- ── Tutorial step descriptions ────────────────────────────────────── -->
+    <!-- Shown in the banner body and read by TalkBack on each step -->
     <string name="tutorial_desc_1">This is the Care tab. Hold your phone to a clothing tag to read its care instructions. You can also tap the Scan Care Label button to read a label with the camera. Tap Got it to continue.</string>
     <string name="tutorial_desc_2">After scanning a tag the Add to Wardrobe button appears at the bottom. Find it and tap it.</string>
     <string name="tutorial_desc_3">This is the Write tab. Choose answers about a clothing item then hold your phone to a blank NFC tag to save it. You can also tap the camera button to pre-fill fields automatically. Tap Got it to continue.</string>

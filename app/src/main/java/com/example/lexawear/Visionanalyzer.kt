@@ -42,12 +42,12 @@ import java.nio.channels.FileChannel
  */
 class VisionAnalyzer(
     private val careSymbolClassifier: CareSymbolClassifier,
-    private val context: Context? = null
+    private val context: Context? = null  // required for string resources and asset loading
 ) {
 
     data class AnalysisResult(
         val fields: Map<String, String>,
-        val labels: List<String>,
+        val labels: List<String>,       // human-readable debug labels (not stored on tag)
         val confidence: Float,
         val fromCareLabel: Boolean = false,
         /** True if type was seen but below confidence threshold — prompt manual entry. */
@@ -66,7 +66,7 @@ class VisionAnalyzer(
      */
     private val TFLITE_TYPE_THRESHOLD = 0.55f
 
-    /** Minimum cluster fraction lead to accept the dominant k-means cluster. */
+    /** Minimum cluster fraction lead to accept the dominant k-means cluster as-is. */
     private val CLUSTER_DOMINANCE_THRESHOLD = 0.15f
 
     // ── Custom TFLite clothing classifier ────────────────────────────────────
@@ -74,9 +74,9 @@ class VisionAnalyzer(
     /**
      * Class labels in the EXACT ORDER your trained model outputs them.
      *
-     * ⚠ IMPORTANT: Update this list after training to match your model's
-     * class output order. The order here must match the order used when
-     * you called `train_clothing_classifier.py` with your dataset.
+     * ⚠ CRITICAL: This list must match the class output order of your trained
+     * model. Mismatch causes silent wrong-type predictions with no error.
+     * Update after training to match `train_clothing_classifier.py` output.
      *
      * Default order matches the DeepFashion2-based training script in
      * `tools/train_clothing_classifier.py`. If you trained on a different
@@ -133,6 +133,7 @@ class VisionAnalyzer(
             val afd         = ctx.assets.openFd(TFLITE_MODEL_FILE)
             val inputStream = FileInputStream(afd.fileDescriptor)
             val fileChannel = inputStream.channel
+            // Memory-map the model file for zero-copy loading into the interpreter.
             val model: java.nio.MappedByteBuffer = fileChannel.map(
                 FileChannel.MapMode.READ_ONLY,
                 afd.startOffset,
@@ -144,7 +145,7 @@ class VisionAnalyzer(
         }
     }
 
-    /** Call this when the fragment is destroyed to free the TFLite interpreter. */
+    /** Releases the TFLite interpreter; call from the hosting fragment's onDestroyView. */
     fun close() {
         tfliteInterpreter?.close()
         tfliteInterpreter = null
@@ -152,6 +153,11 @@ class VisionAnalyzer(
 
     // ── Clothing type mapping (ML Kit fallback path) ──────────────────────────
 
+    /**
+     * Maps ML Kit free-text labels to LexaWEAR type codes.
+     * Generic clothing words (e.g. "clothing", "fabric") map to "" so they don't
+     * produce a false type match but do count as a clothing detection.
+     */
     private val labelToTypeCode = mapOf(
         "shirt"        to "SH", "dress shirt"   to "SH",
         "t-shirt"      to "TS", "tshirt"        to "TS", "tee"       to "TS",
@@ -169,14 +175,19 @@ class VisionAnalyzer(
         "shorts"       to "ST",
         "skirt"        to "SK",
         "socks"        to "SC", "sock"          to "SC",
-        "clothing"     to "",   "fashion"       to "",
-        "textile"      to "",   "fabric"        to ""
+        "clothing"     to "",   "fashion"       to "",   // generic — no type code
+        "textile"      to "",   "fabric"        to ""    // generic — no type code
     )
 
     // ── Care label OCR rules ──────────────────────────────────────────────────
 
     private data class OcrRule(val pattern: Regex, val field: String, val code: String)
 
+    /**
+     * Ordered OCR matching rules for care label text.
+     * First-match wins per field — more specific patterns (e.g. "do not wash")
+     * must appear before general ones (e.g. "machine wash") to avoid wrong codes.
+     */
     private val ocrRules = listOf(
         OcrRule(Regex("do not wash|do not launder|no wash",               RegexOption.IGNORE_CASE), "W", "N"),
         OcrRule(Regex("hand\\s*wash|hand launder",                        RegexOption.IGNORE_CASE), "W", "H"),
@@ -201,11 +212,12 @@ class VisionAnalyzer(
     // ── Public API ────────────────────────────────────────────────────────────
 
     /**
-     * Analyze a clothing item bitmap.
+     * Analyse a clothing item bitmap.
      *
-     * Uses the custom TFLite model if available, otherwise falls back to ML Kit.
-     * Returns type (if confidence ≥ threshold), color (k-means), pattern fields.
-     * Sets [AnalysisResult.typeLowConfidence] when type was seen but not confident.
+     * Dispatches to [analyzeClothingWithTflite] if the custom model is loaded,
+     * otherwise falls back to [analyzeClothingWithMlKit].
+     * Returns type (if confidence ≥ threshold), colour (k-means), pattern fields.
+     * Sets [AnalysisResult.typeLowConfidence] when type was detected but not confident.
      */
     fun analyzeClothing(bitmap: Bitmap, onResult: (AnalysisResult) -> Unit) {
         if (isCustomModelAvailable) {
@@ -217,9 +229,13 @@ class VisionAnalyzer(
 
     /**
      * Tier 1: Custom TFLite clothing classifier.
+     *
      * Pre-processes the bitmap to [TFLITE_INPUT_SIZE]×[TFLITE_INPUT_SIZE],
-     * runs inference, applies softmax, and maps the top class to a LexaWEAR
-     * type code using [CLOTHING_LABELS].
+     * normalises pixels to [0, 1], runs inference, applies softmax to convert
+     * raw logits to probabilities, then maps the top class index to a LexaWEAR
+     * type code via [CLOTHING_LABELS].
+     *
+     * Falls back to [analyzeClothingWithMlKit] on any exception.
      */
     private fun analyzeClothingWithTflite(bitmap: Bitmap, onResult: (AnalysisResult) -> Unit) {
         try {
@@ -227,7 +243,7 @@ class VisionAnalyzer(
                 analyzeClothingWithMlKit(bitmap, onResult); return
             }
 
-            // Pre-process: resize to model input size, normalize to [0, 1].
+            // Pre-process: resize to model input size, normalise pixels to [0.0, 1.0].
             val resized     = Bitmap.createScaledBitmap(bitmap, TFLITE_INPUT_SIZE, TFLITE_INPUT_SIZE, true)
             val inputBuffer = ByteBuffer.allocateDirect(4 * TFLITE_INPUT_SIZE * TFLITE_INPUT_SIZE * 3)
                 .apply { order(ByteOrder.nativeOrder()) }
@@ -235,18 +251,19 @@ class VisionAnalyzer(
             for (y in 0 until TFLITE_INPUT_SIZE) {
                 for (x in 0 until TFLITE_INPUT_SIZE) {
                     val pixel = resized.getPixel(x, y)
+                    // Channel order: R, G, B — must match training pre-processing.
                     inputBuffer.putFloat(Color.red(pixel)   / 255f)
                     inputBuffer.putFloat(Color.green(pixel) / 255f)
                     inputBuffer.putFloat(Color.blue(pixel)  / 255f)
                 }
             }
 
-            // Run inference.
+            // Run inference — output shape is [1, CLOTHING_LABELS.size].
             val outputBuffer = Array(1) { FloatArray(CLOTHING_LABELS.size) }
             interpreter.run(inputBuffer, outputBuffer)
             val scores = outputBuffer[0]
 
-            // Softmax (model may output logits).
+            // Softmax: subtract max score first for numerical stability before exp().
             val maxScore  = scores.max()
             val expScores = scores.map { Math.exp((it - maxScore).toDouble()).toFloat() }
             val sumExp    = expScores.sum()
@@ -257,6 +274,7 @@ class VisionAnalyzer(
             val topCode       = CLOTHING_LABELS.getOrElse(topIndex) { "" }
 
             val typeCode          = if (topProb >= TFLITE_TYPE_THRESHOLD && topCode.isNotEmpty()) topCode else ""
+            // Low confidence: type was seen but not reliable enough to pre-fill.
             val typeLowConfidence = topCode.isNotEmpty() && topProb < TFLITE_TYPE_THRESHOLD
 
             val colorHex    = extractDominantColor(bitmap)
@@ -275,18 +293,21 @@ class VisionAnalyzer(
             ))
 
         } catch (e: Exception) {
-            // TFLite inference failed — fall back to ML Kit.
+            // TFLite inference failed — fall back to ML Kit rather than surfacing an error.
             analyzeClothingWithMlKit(bitmap, onResult)
         }
     }
 
     /**
      * Tier 2: ML Kit Image Labeling fallback.
-     * Used when custom TFLite model is absent or inference fails.
+     * Used when custom TFLite model is absent or throws during inference.
+     * Maps ML Kit free-text labels to type codes via [labelToTypeCode].
+     * Colour and pattern are still extracted even if no type is matched.
      */
     private fun analyzeClothingWithMlKit(bitmap: Bitmap, onResult: (AnalysisResult) -> Unit) {
         val image   = InputImage.fromBitmap(bitmap, 0)
         val labeler = ImageLabeling.getClient(
+            // 0.4f threshold to cast a wide net — type confidence filter applied below.
             ImageLabelerOptions.Builder().setConfidenceThreshold(0.4f).build()
         )
 
@@ -295,6 +316,7 @@ class VisionAnalyzer(
                 val rawLabels     = labels.map { it.text.lowercase() }
                 val topConfidence = labels.firstOrNull()?.confidence ?: 0f
 
+                // Find the first label that maps to a non-empty type code.
                 val matchedTypeCode = rawLabels.firstNotNullOfOrNull { label ->
                     labelToTypeCode.entries.firstOrNull { (key, _) ->
                         label.contains(key)
@@ -302,6 +324,7 @@ class VisionAnalyzer(
                 }
 
                 val typeCode          = if (topConfidence >= TYPE_CONFIDENCE_THRESHOLD) matchedTypeCode ?: "" else ""
+                // Low confidence: a clothing type was matched but overall confidence too low.
                 val typeLowConfidence = matchedTypeCode != null && topConfidence < TYPE_CONFIDENCE_THRESHOLD
 
                 val colorHex    = extractDominantColor(bitmap)
@@ -320,6 +343,7 @@ class VisionAnalyzer(
                 ))
             }
             .addOnFailureListener {
+                // ML Kit failed entirely — still return colour/pattern if available.
                 val colorHex    = extractDominantColor(bitmap)
                 val patternCode = detectPattern(bitmap)
                 val fields = mutableMapOf<String, String>()
@@ -330,8 +354,11 @@ class VisionAnalyzer(
     }
 
     /**
-     * Analyze a care label bitmap.
-     * Returns wash, dry, iron, bleach, dry-clean fields from OCR + TFLite stub.
+     * Analyse a care label bitmap.
+     *
+     * Primary: ML Kit OCR matched against [ocrRules] (first-match per field).
+     * Secondary: [CareSymbolClassifier] fills any fields OCR didn't populate.
+     * Returns wash / dry / iron / bleach / dry-clean fields where found.
      */
     fun analyzeCareLabel(bitmap: Bitmap, onResult: (AnalysisResult) -> Unit) {
         val image      = InputImage.fromBitmap(bitmap, 0)
@@ -341,14 +368,16 @@ class VisionAnalyzer(
             .addOnSuccessListener { visionText ->
                 val text   = visionText.text
                 val fields = mutableMapOf<String, String>()
+                // First-match per field — ocrRules ordering is load-bearing (specific before general).
                 ocrRules.forEach { rule ->
                     if (rule.field !in fields && rule.pattern.containsMatchIn(text)) {
                         fields[rule.field] = rule.code
                     }
                 }
+                // Symbol classifier fills fields OCR couldn't read (e.g. no text on label).
                 if (careSymbolClassifier.isAvailable) {
                     careSymbolClassifier.classify(bitmap).forEach { (k, v) ->
-                        if (k !in fields) fields[k] = v
+                        if (k !in fields) fields[k] = v  // OCR result takes precedence
                     }
                 }
                 onResult(AnalysisResult(
@@ -359,6 +388,7 @@ class VisionAnalyzer(
                 ))
             }
             .addOnFailureListener {
+                // OCR failed — fall back to symbol classifier only if available.
                 val fields = if (careSymbolClassifier.isAvailable)
                     careSymbolClassifier.classify(bitmap).toMutableMap()
                 else mutableMapOf()
@@ -372,12 +402,15 @@ class VisionAnalyzer(
     }
 
     /**
-     * Quick live-preview analysis — lighter than full analyzeClothing.
-     * Returns a human-readable label string for the overlay; no pixel analysis.
+     * Lightweight live-preview analysis for the camera overlay hint.
+     * Uses ML Kit only — no pixel analysis — to keep frame processing fast.
+     * Returns a human-readable label string (not an [AnalysisResult]);
+     * result is never stored or written to a tag.
      */
     fun analyzeLiveFrame(bitmap: Bitmap, onResult: (String) -> Unit) {
         val image   = InputImage.fromBitmap(bitmap, 0)
         val labeler = ImageLabeling.getClient(
+            // Higher threshold than full analysis — only show confident hints.
             ImageLabelerOptions.Builder().setConfidenceThreshold(0.55f).build()
         )
         labeler.process(image)
@@ -386,6 +419,7 @@ class VisionAnalyzer(
                     onResult(context?.getString(R.string.vision_analyzing) ?: "…")
                     return@addOnSuccessListener
                 }
+                // Top 3 labels formatted as "Label N%  ·  Label N%  ·  Label N%".
                 onResult(labels.take(3).joinToString("  ·  ") {
                     "${it.text} ${(it.confidence * 100).toInt()}%"
                 })
@@ -404,10 +438,10 @@ class VisionAnalyzer(
      *  3. Skip near-white (brightness > 235) and near-black (brightness < 20).
      *  4. Run k-means for 10 iterations.
      *  5. Pick largest cluster if it leads by ≥ [CLUSTER_DOMINANCE_THRESHOLD],
-     *     otherwise blend the top-2 by weight.
+     *     otherwise blend the top-2 clusters by member count.
      *  6. Map the winning RGB to the nearest [ColorPalette] entry.
      *
-     * Falls back to [simpleAverageColor] on error or insufficient samples.
+     * Falls back to [simpleAverageColor] on error or fewer than 10 valid samples.
      */
     fun extractDominantColor(bitmap: Bitmap): String {
         return try {
@@ -422,6 +456,7 @@ class VisionAnalyzer(
                 for (x in startX until endX step stepX) {
                     val p = bitmap.getPixel(x, y)
                     val r = Color.red(p); val g = Color.green(p); val b = Color.blue(p)
+                    // Exclude near-black (<20) and near-white (>235) to avoid background bias.
                     if ((r + g + b) / 3 in 20..235) samples.add(Triple(r, g, b))
                 }
             }
@@ -435,6 +470,7 @@ class VisionAnalyzer(
             val dominantFraction = sorted[0].size / total
             val secondFraction   = if (sorted.size > 1) sorted[1].size / total else 0f
 
+            // If the dominant cluster leads clearly, use it alone; otherwise blend top-2.
             val (r, g, b) = if (dominantFraction - secondFraction >= CLUSTER_DOMINANCE_THRESHOLD) {
                 sorted[0].centroid
             } else {
@@ -455,25 +491,39 @@ class VisionAnalyzer(
 
     // ── K-means ───────────────────────────────────────────────────────────────
 
+    /**
+     * Holds a cluster's centroid RGB and its member pixels.
+     * Centroid is updated in-place each iteration.
+     */
     private data class Cluster(
         var centroid: Triple<Int, Int, Int>,
         val members: MutableList<Triple<Int, Int, Int>> = mutableListOf()
     ) { val size get() = members.size }
 
+    /**
+     * Simple k-means implementation for RGB pixel clustering.
+     * Seeds using a spread-initialisation strategy (not random) for
+     * deterministic results: first centroid is the median sample,
+     * subsequent centroids are the samples farthest from existing ones.
+     */
     private fun kMeans(samples: List<Triple<Int, Int, Int>>, k: Int, iterations: Int): List<Cluster> {
         if (samples.size <= k) return samples.map { Cluster(it, mutableListOf(it)) }
 
+        // Seed: start at median sample, then pick farthest remaining samples.
         val centroids = mutableListOf(samples[samples.size / 2])
         while (centroids.size < k) {
             val farthest = samples.maxByOrNull { s -> centroids.minOf { c -> rgbDistanceSq(s, c) } } ?: break
             if (!centroids.contains(farthest)) centroids.add(farthest) else break
         }
+        // Fallback: fill remaining slots with evenly-spaced samples if seeding stalled.
         while (centroids.size < k) centroids.add(samples[(samples.size * centroids.size) / k])
 
         var clusters = centroids.map { Cluster(it) }
         repeat(iterations) {
+            // E-step: assign each sample to its nearest centroid.
             clusters.forEach { it.members.clear() }
             samples.forEach { s -> clusters.minByOrNull { rgbDistanceSq(s, it.centroid) }!!.members.add(s) }
+            // M-step: recompute each centroid as the mean of its members.
             clusters.forEach { cluster ->
                 if (cluster.members.isNotEmpty()) {
                     val n = cluster.members.size.toFloat()
@@ -488,11 +538,16 @@ class VisionAnalyzer(
         return clusters
     }
 
+    /** Squared Euclidean distance in RGB space — avoids sqrt for comparison-only use. */
     private fun rgbDistanceSq(a: Triple<Int, Int, Int>, b: Triple<Int, Int, Int>): Int {
         val dr = a.first - b.first; val dg = a.second - b.second; val db = a.third - b.third
         return dr * dr + dg * dg + db * db
     }
 
+    /**
+     * Simple centre-crop average colour — used when k-means can't run
+     * (fewer than 10 valid samples or unexpected exception).
+     */
     private fun simpleAverageColor(bitmap: Bitmap): String {
         val w = bitmap.width; val h = bitmap.height
         val startX = (w * 0.2).toInt(); val endX = (w * 0.8).toInt()
@@ -512,12 +567,20 @@ class VisionAnalyzer(
     // ── Pattern detection ─────────────────────────────────────────────────────
 
     /**
-     * Heuristic pattern detection based on pixel variance and edge frequency
-     * on a 64×64 downscaled grayscale copy of the bitmap.
+     * Heuristic pattern detection from edge frequency on a 64×64 greyscale image.
+     *
+     * Low variance → plain ("P").
+     * High horizontal + vertical edges → checkered ("CH").
+     * High horizontal or vertical edges alone → striped ("ST").
+     * High variance with no dominant edge direction → graphic print ("GR").
+     * Otherwise → plain ("P").
+     *
+     * Thresholds are empirical — retune with real garment images if needed.
      */
     fun detectPattern(bitmap: Bitmap): String {
         val scale = 64
         val small = Bitmap.createScaledBitmap(bitmap, scale, scale, true)
+        // Convert to greyscale intensity grid for edge analysis.
         val pixels = Array(scale) { y ->
             IntArray(scale) { x ->
                 val p = small.getPixel(x, y)
@@ -527,8 +590,10 @@ class VisionAnalyzer(
         val flat     = pixels.flatMap { it.toList() }
         val mean     = flat.average()
         val variance = flat.map { (it - mean) * (it - mean) }.average()
+        // Low variance → uniform colour → plain.
         if (variance < 200) return "P"
 
+        // Count pixels where neighbour delta exceeds edge threshold (30 intensity units).
         var hEdges = 0
         for (y in 1 until scale) for (x in 0 until scale) if (Math.abs(pixels[y][x] - pixels[y-1][x]) > 30) hEdges++
         var vEdges = 0
@@ -536,10 +601,10 @@ class VisionAnalyzer(
 
         val total = (scale * scale).toFloat()
         return when {
-            hEdges / total > 0.3f && vEdges / total > 0.3f -> "CH"
-            hEdges / total > 0.25f                         -> "ST"
-            vEdges / total > 0.25f                         -> "ST"
-            variance > 1500                                -> "GR"
+            hEdges / total > 0.3f && vEdges / total > 0.3f -> "CH"  // grid pattern
+            hEdges / total > 0.25f                         -> "ST"  // horizontal stripes
+            vEdges / total > 0.25f                         -> "ST"  // vertical stripes
+            variance > 1500                                -> "GR"  // high variance, no clear edges
             else                                           -> "P"
         }
     }

@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
+
+<!--
+    color_dot.xml — Circle shape drawable for the wardrobe list colour indicator.
+
+    Used by item_wardrobe.xml (view_color_dot). The white fill here is a
+    placeholder only — WardrobeAdapter.getView() overrides the background
+    colour at bind time with Color.parseColor("#" + item.color).
+    Falls back to #607D8B (grey) if the stored hex is missing or malformed.
+
+    Size 24×24dp matches the view_color_dot dimensions in item_wardrobe.xml.
+-->
+
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="oval">
+
+    <!-- Placeholder white fill — overridden at runtime by WardrobeAdapter -->
     <solid android:color="#FFFFFF" />
+
     <size android:width="24dp" android:height="24dp" />
+
 </shape>

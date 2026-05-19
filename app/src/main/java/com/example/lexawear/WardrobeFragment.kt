@@ -21,12 +21,17 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
 
+/**
+ * Persisted clothing item; raw codes stored as-is — decoded at display time.
+ * [isLegacy] is derived on load and stored so the banner can be shown without
+ * re-scanning every item on each render.
+ */
 data class WardrobeItem(
     val id: Long,
     var name: String,
-    var type: String,
-    var color: String,
-    var pattern: String,
+    var type: String,      // language-neutral code e.g. "JK"
+    var color: String,     // 6-char hex without '#' e.g. "2196F3"
+    var pattern: String,   // language-neutral code e.g. "P"
     var size: String,
     var formality: String,
     var season: String,
@@ -40,32 +45,65 @@ data class WardrobeItem(
     var isLegacy: Boolean = false
 )
 
+/**
+ * WardrobeFragment — persistent list of clothing items with NFC-scan add flow
+ * and multi-axis filtering (type / colour / season / formality).
+ *
+ * Items are stored in SharedPreferences as a JSON array using language-neutral
+ * codes; all decoding to display strings happens at render time via the lookup
+ * tables below. Legacy items (unrecognised codes from older tag formats) are
+ * always shown regardless of active filters and flagged with ⚠ in the list.
+ *
+ * Three pending fields allow MainActivity to deliver data before the view
+ * is inflated: [pendingAddName], [pendingRaw], and [pendingFilters].
+ */
 class WardrobeFragment : Fragment() {
 
+    /**
+     * Set by MainActivity when the user adds an item by name only (no NFC raw).
+     * Consumed in [onCreateView] → [showAddDialog]; null after first use.
+     */
     var pendingAddName: String? = null
-    var pendingFilters: Array<String>? = null
+
+    /**
+     * Set by MainActivity when a full raw tag string is available (e.g. from
+     * CareFragment "Add to Wardrobe"). Consumed in [onCreateView] → [addItemFromRaw].
+     */
     var pendingRaw: String? = null
 
+    /**
+     * Set by FilterFragment via MainActivity to restore a filter state.
+     * Array order: [typeCode, colorHex, seasonCode, formalityCode].
+     * Consumed in [onCreateView] → [applyFilters]; null after first use.
+     */
+    var pendingFilters: Array<String>? = null
+
     private lateinit var tvStatus: TextView
-    private lateinit var tvActiveFilters: TextView
-    private lateinit var tvLegacyBanner: TextView
+    private lateinit var tvActiveFilters: TextView  // describes active filter chips for TalkBack
+    private lateinit var tvLegacyBanner: TextView   // shown when any stored item has unrecognised codes
     private lateinit var btnScan: Button
     private lateinit var btnOpenFilters: Button
     private lateinit var btnVoiceFilter: Button
     private lateinit var listView: ListView
 
     private var nfcAdapter: NfcAdapter? = null
+
+    /** True while waiting for the user to hold a tag to add it to the wardrobe. */
     private var isScanning = false
-    private val items = mutableListOf<WardrobeItem>()
-    private var filteredItems = mutableListOf<WardrobeItem>()
+
+    private val items         = mutableListOf<WardrobeItem>() // full persisted list
+    private var filteredItems = mutableListOf<WardrobeItem>() // subset shown in listView
     private lateinit var adapter: WardrobeAdapter
 
+    // Active filter codes — empty string means "no filter on this axis".
     private var activeFilterTypeCode      = ""
     private var activeFilterColorHex      = ""
     private var activeFilterSeasonCode    = ""
     private var activeFilterFormalityCode = ""
 
     // ── Lookup tables ─────────────────────────────────────────────────────────
+    // All use `get()` properties so getString() is called after fragment attach,
+    // not at class initialisation time when context is unavailable.
 
     private val typeCodeToName get() = linkedMapOf(
         "SH" to getString(R.string.type_shirt),   "TS" to getString(R.string.type_tshirt),
@@ -86,6 +124,7 @@ class WardrobeFragment : Fragment() {
         "AN" to getString(R.string.pattern_animal)
     )
 
+    /** Multi-code formality combos; checked before single codes in [decodeFormality]. */
     private val formalityComboToName get() = mapOf(
         "SC" to getString(R.string.formality_smart_casual),
         "BC" to getString(R.string.formality_business_casual),
@@ -102,20 +141,28 @@ class WardrobeFragment : Fragment() {
         "SU" to getString(R.string.season_summer), "A"  to getString(R.string.season_autumn),
         "AS" to getString(R.string.season_all)
     )
+
+    /**
+     * Season codes ordered longest-first so [parseSeasonComponents] matches
+     * "SP"/"SU"/"AS" before consuming "S"/"A" prematurely.
+     */
     private val seasonCodesByLength = listOf("AS", "SP", "SU", "W", "A")
 
     // ── Decoders ──────────────────────────────────────────────────────────────
 
+    /** Returns the localised type name for [code], or [code] itself if unrecognised. */
     private fun decodeType(code: String): String =
         typeCodeToName[code.uppercase()] ?: code
 
+    /** Returns the localised pattern name for [code], or [code] itself if unrecognised. */
     private fun decodePattern(code: String): String =
         patternCodeToName[code.uppercase()] ?: code
 
     /**
-     * Resolves a hex colour code to a localised name via ColorPalette.
-     * Exact palette match → localised name.
-     * Off-palette hex (legacy tags) → nearest palette colour name.
+     * Resolves a hex colour code to a localised name via [ColorPalette].
+     * Exact palette match → localised name (not legacy).
+     * Off-palette hex → nearest palette colour name (still flagged legacy by [isLegacyValue]).
+     * Unparseable string → returned as-is.
      */
     private fun decodeColor(hex: String): String {
         val clean = hex.uppercase().trimStart('#')
@@ -126,11 +173,13 @@ class WardrobeFragment : Fragment() {
         } catch (e: Exception) { hex }
     }
 
+    /** Combo codes checked before single codes to avoid partial matches (e.g. "SC" ≠ "S"). */
     private fun decodeFormality(code: String): String {
         val v = code.uppercase()
         return formalityComboToName[v] ?: formalitySingleToName[v] ?: code
     }
 
+    /** Handles both single codes ("W") and concatenated multi-season codes ("WSP"). */
     private fun decodeSeason(code: String): String {
         val v = code.uppercase()
         seasonSingleToName[v]?.let { return it }
@@ -138,9 +187,15 @@ class WardrobeFragment : Fragment() {
         return parts.joinToString("/") { seasonSingleToName[it] ?: it }
     }
 
+    /**
+     * Splits a concatenated season code into its component codes using greedy
+     * longest-first matching. Returns null if the string cannot be fully parsed.
+     * Used by both [decodeSeason] and [seasonContains].
+     */
     private fun parseSeasonComponents(code: String): List<String>? {
         val v = code.uppercase(); val parts = mutableListOf<String>(); var remaining = v
         while (remaining.isNotEmpty()) {
+            // seasonCodesByLength ordered longest-first — must not reorder.
             val match = seasonCodesByLength.firstOrNull { remaining.startsWith(it) } ?: return null
             parts.add(match); remaining = remaining.removePrefix(match)
         }
@@ -166,13 +221,19 @@ class WardrobeFragment : Fragment() {
 
     // ── Legacy detection ──────────────────────────────────────────────────────
 
+    /**
+     * Returns true if [value] is a non-empty string that isn't a recognised code
+     * for [key]. Used to flag items from older tag formats on load and on new add.
+     *
+     * Colour is treated specially: any parseable hex is accepted (even off-palette);
+     * only strings that fail Color.parseColor are truly legacy.
+     */
     private fun isLegacyValue(key: String, value: String): Boolean {
         if (value.isEmpty()) return false
         return when (key) {
             "T"  -> typeCodeToName[value.uppercase()] == null
             "P"  -> patternCodeToName[value.uppercase()] == null
-            // A colour is legacy only if it can't be parsed as hex at all.
-            // Off-palette hex values are valid but will be nearest-matched.
+            // Any parseable hex is valid — off-palette values are nearest-matched, not rejected.
             "CL" -> try { Color.parseColor("#${value.uppercase().trimStart('#')}"); false }
             catch (e: Exception) { true }
             "F"  -> { val v = value.uppercase(); formalityComboToName[v] == null && formalitySingleToName[v] == null }
@@ -188,6 +249,10 @@ class WardrobeFragment : Fragment() {
 
     // ── Voice filter ──────────────────────────────────────────────────────────
 
+    /**
+     * Processes spoken filter input and maps natural-language words to filter codes.
+     * Calls [applyFilters] after all four axes are resolved (empty string = no filter).
+     */
     private val voiceFilterLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -196,6 +261,7 @@ class WardrobeFragment : Fragment() {
                 ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
                 ?.firstOrNull()?.lowercase() ?: return@registerForActivityResult
 
+            // Type: check compound words first ("t-shirt") before shorter matches ("shirt").
             activeFilterTypeCode = when {
                 "t-shirt" in spoken || "tshirt" in spoken -> "TS"
                 "shirt"     in spoken -> "SH"; "jacket"    in spoken -> "JK"
@@ -209,7 +275,7 @@ class WardrobeFragment : Fragment() {
                 else -> ""
             }
 
-            // Map spoken colour to the nearest palette entry hex.
+            // Colour: map spoken word to nearest palette hex for filter comparison.
             activeFilterColorHex = when {
                 "black"  in spoken -> "212121"; "white"  in spoken -> "F5F5F5"
                 "grey"   in spoken || "gray" in spoken -> "9E9E9E"
@@ -237,6 +303,8 @@ class WardrobeFragment : Fragment() {
                 "autumn" in spoken || "fall" in spoken -> "A"; "winter" in spoken -> "W"
                 else -> ""
             }
+
+            // Formality: compound phrases checked before single-word matches.
             activeFilterFormalityCode = when {
                 "smart" in spoken && "casual" in spoken    -> "SC"
                 "business" in spoken && "casual" in spoken -> "BC"
@@ -278,6 +346,7 @@ class WardrobeFragment : Fragment() {
         }
 
         btnOpenFilters.setOnClickListener {
+            // Pass current active codes to FilterFragment so its UI reflects the live state.
             val filterFragment = FilterFragment().apply {
                 restoreFilters(activeFilterTypeCode, activeFilterColorHex,
                     activeFilterSeasonCode, activeFilterFormalityCode)
@@ -294,11 +363,13 @@ class WardrobeFragment : Fragment() {
         }
 
         btnScan.setOnClickListener {
+            // Set flag before announcing — NFC intent may arrive very quickly on some devices.
             isScanning = true
             updateStatus(getString(R.string.wardrobe_status_hold_tag))
             tvStatus.announceForAccessibility(getString(R.string.wardrobe_status_hold_tag_accessibility))
         }
 
+        // Consume pending deliveries from MainActivity in priority order.
         pendingAddName?.let { showAddDialog(it); pendingAddName = null }
         pendingRaw?.let { addItemFromRaw(it); pendingRaw = null }
         pendingFilters?.let { applyFilters(it[0], it[1], it[2], it[3]); pendingFilters = null }
@@ -308,6 +379,10 @@ class WardrobeFragment : Fragment() {
 
     // ── NFC ───────────────────────────────────────────────────────────────────
 
+    /**
+     * Entry point called by [MainActivity] when an NFC tag is detected.
+     * Ignored if [isScanning] is false (user hasn't pressed the Scan button yet).
+     */
     fun onTagDiscovered(tag: Tag) {
         if (!isScanning) return
         try {
@@ -320,8 +395,10 @@ class WardrobeFragment : Fragment() {
                 requireActivity().runOnUiThread { updateStatus(getString(R.string.wardrobe_tag_write_first)); isScanning = false }
                 return
             }
+            // Drop the 3-byte NDEF language prefix before parsing field pairs.
             val raw = message.records.filter { it.tnf == NdefRecord.TNF_WELL_KNOWN }
                 .mapNotNull { String(it.payload).drop(3) }.joinToString("")
+            // "N:" is the minimum marker that identifies a LexaWEAR tag.
             if (!raw.contains("N:")) {
                 requireActivity().runOnUiThread { updateStatus(getString(R.string.tag_not_lexawear)); isScanning = false }
                 return
@@ -333,8 +410,13 @@ class WardrobeFragment : Fragment() {
         }
     }
 
+    /** Public entry point used by [MainActivity.addToWardrobe] to add an item from a raw string. */
     fun addItemFromRaw(raw: String) { showConfirmDialog(buildItemFromRaw(raw)) }
 
+    /**
+     * Parses a raw tag string into a [WardrobeItem], evaluating legacy status
+     * across all enumerated fields at build time so it doesn't need re-checking later.
+     */
     private fun buildItemFromRaw(raw: String): WardrobeItem {
         val tagData   = parseTagData(raw)
         val legacyKeys = setOf("T","P","CL","F","SE","W","D","I","B","C")
@@ -352,6 +434,7 @@ class WardrobeFragment : Fragment() {
         )
     }
 
+    /** Splits a raw pipe-separated tag string into a key→value map. Unknown keys are included. */
     private fun parseTagData(raw: String): Map<String, String> {
         val result = mutableMapOf<String, String>()
         raw.split("|").forEach { part ->
@@ -363,6 +446,10 @@ class WardrobeFragment : Fragment() {
 
     // ── Dialogs ───────────────────────────────────────────────────────────────
 
+    /**
+     * Shows a confirmation dialog with a decoded summary before adding [item].
+     * Legacy items show an extra warning line in the message body.
+     */
     private fun showConfirmDialog(item: WardrobeItem) {
         val summary = listOf(
             getString(R.string.field_item)      to item.name,
@@ -384,6 +471,10 @@ class WardrobeFragment : Fragment() {
             .setNegativeButton(getString(R.string.dialog_cancel), null).show()
     }
 
+    /**
+     * Convenience overload used when adding a name-only item (no tag raw data).
+     * All field codes default to empty — no legacy flag.
+     */
     fun showAddDialog(nameFromTag: String) {
         showConfirmDialog(WardrobeItem(id = System.currentTimeMillis(), name = nameFromTag,
             type = "", color = "", pattern = "", size = "", formality = "",
@@ -391,6 +482,10 @@ class WardrobeFragment : Fragment() {
             bleach = "", dryClean = "", notes = ""))
     }
 
+    /**
+     * Shows a full-detail dialog for a wardrobe item with a delete option.
+     * Legacy items show ⚠ in the title and a re-write prompt in the body.
+     */
     private fun showItemOptionsDialog(item: WardrobeItem) {
         val summary = listOf(
             getString(R.string.field_type)      to decodeType(item.type),
@@ -415,6 +510,7 @@ class WardrobeFragment : Fragment() {
             .setNegativeButton(getString(R.string.dialog_close), null).show()
     }
 
+    /** Two-step delete: called from [showItemOptionsDialog] to require explicit confirmation. */
     private fun showDeleteDialog(item: WardrobeItem) {
         AlertDialog.Builder(requireContext())
             .setTitle(getString(R.string.dialog_delete_title))
@@ -429,6 +525,11 @@ class WardrobeFragment : Fragment() {
 
     // ── Filtering ─────────────────────────────────────────────────────────────
 
+    /**
+     * Filters [items] against the four active axes and refreshes the list.
+     * Default parameter values allow callers to update one axis and keep the rest.
+     * Legacy items always pass the filter — they are never hidden regardless of criteria.
+     */
     fun applyFilters(
         typeCode: String      = activeFilterTypeCode,
         colorHex: String      = activeFilterColorHex,
@@ -439,9 +540,11 @@ class WardrobeFragment : Fragment() {
         activeFilterSeasonCode = seasonCode; activeFilterFormalityCode = formalityCode
 
         filteredItems = items.filter { item ->
+            // Legacy items always shown — they can't be reliably matched against filter codes.
             if (item.isLegacy) return@filter true
             val typeOk      = typeCode.isEmpty()     || item.type.equals(typeCode, ignoreCase = true)
             val colorOk     = colorHex.isEmpty()     || item.color.equals(colorHex, ignoreCase = true)
+            // "All seasons" items always match any season filter.
             val seasonOk    = seasonCode.isEmpty()   || item.season.equals("AS", ignoreCase = true) ||
                     seasonContains(item.season, seasonCode)
             val formalityOk = formalityCode.isEmpty() || item.formality.equals(formalityCode, ignoreCase = true)
@@ -465,11 +568,17 @@ class WardrobeFragment : Fragment() {
         updateStatus(getString(R.string.wardrobe_status_shown, filteredItems.size))
     }
 
+    /**
+     * Returns true if [filterSeason] is one of the component codes within
+     * a (possibly concatenated) [itemSeason] string.
+     * e.g. itemSeason="WSP", filterSeason="SP" → true.
+     */
     private fun seasonContains(itemSeason: String, filterSeason: String): Boolean {
         val components = parseSeasonComponents(itemSeason) ?: return false
         return components.any { it.equals(filterSeason, ignoreCase = true) }
     }
 
+    /** Shows or hides the legacy banner based on how many stored items have [WardrobeItem.isLegacy]. */
     private fun updateLegacyBanner() {
         val legacyCount = items.count { it.isLegacy }
         if (legacyCount > 0) {
@@ -484,6 +593,10 @@ class WardrobeFragment : Fragment() {
 
     // ── Persistence ───────────────────────────────────────────────────────────
 
+    /**
+     * Serialises [items] to SharedPreferences as a JSON array.
+     * Raw codes are stored as-is; decoding happens at display time.
+     */
     private fun saveItems() {
         val arr = JSONArray()
         items.forEach { item ->
@@ -500,6 +613,11 @@ class WardrobeFragment : Fragment() {
             .edit().putString("items", arr.toString()).apply()
     }
 
+    /**
+     * Deserialises items from SharedPreferences.
+     * If a stored object has no "isLegacy" key (written by an older app version),
+     * legacy status is re-derived from the stored field codes on the fly.
+     */
     private fun loadItems() {
         val prefs = requireContext().getSharedPreferences("wardrobe", Context.MODE_PRIVATE)
         val arr   = JSONArray(prefs.getString("items", "[]") ?: "[]")
@@ -516,6 +634,7 @@ class WardrobeFragment : Fragment() {
                 bleach = obj.optString("bleach"), dryClean = obj.optString("dryClean"),
                 notes = obj.optString("notes"), isLegacy = obj.optBoolean("isLegacy", false)
             )
+            // Migration path: re-derive legacy flag for items saved before isLegacy was stored.
             if (!obj.has("isLegacy")) {
                 item.isLegacy = mapOf(
                     "T" to item.type, "P" to item.pattern, "CL" to item.color,
@@ -527,12 +646,19 @@ class WardrobeFragment : Fragment() {
         }
     }
 
+    /** Posts a status message and sets contentDescription for TalkBack. */
     private fun updateStatus(message: String) {
         tvStatus.text = message; tvStatus.contentDescription = "Status: $message"
     }
 
     // ── Adapter ───────────────────────────────────────────────────────────────
 
+    /**
+     * ListView adapter for the wardrobe list. Uses [filteredItems] as its data source.
+     * Each row shows name, decoded category line, and a colour dot.
+     * Legacy items prefix the name with ⚠ and prepend "Old format." to the
+     * contentDescription so TalkBack users hear the warning.
+     */
     inner class WardrobeAdapter : BaseAdapter() {
         override fun getCount() = filteredItems.size
         override fun getItem(pos: Int) = filteredItems[pos]
@@ -559,6 +685,7 @@ class WardrobeFragment : Fragment() {
                 seasonName.takeIf { it.isNotEmpty() }, formalityName.takeIf { it.isNotEmpty() }
             ).joinToString(" · ")
 
+            // Fallback to neutral grey if the stored hex is missing or malformed.
             try {
                 val hex = if (item.color.length == 6) "#${item.color}" else "#607D8B"
                 colorDot.setBackgroundColor(Color.parseColor(hex))

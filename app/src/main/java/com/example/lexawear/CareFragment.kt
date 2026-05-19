@@ -14,18 +14,44 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 
+/**
+ * CareFragment — scans an NFC tag and displays its care instructions.
+ *
+ * Primary flow: user holds a LexaWEAR tag to the device → tag data is parsed
+ * and rendered as a card list. Care fields (W/D/I/B/C) are highlighted; all
+ * other fields (type, colour, pattern, etc.) are also shown for context.
+ *
+ * Secondary flow: camera results from [CameraFragment] (Source.CARE) arrive
+ * via [displayVisionResults] and are rendered using the same card layout.
+ *
+ * Legacy detection: any field whose stored code is unrecognised is flagged
+ * as legacy (isLegacy = true), a banner is shown, and the value is prefixed
+ * with ⚠ so blind users hear the warning via TalkBack.
+ *
+ * "Add to Wardrobe" becomes visible after a successful scan; tapping it
+ * delegates to [MainActivity.addToWardrobe] with the raw tag string.
+ */
 class CareFragment : Fragment() {
 
     private lateinit var tvStatus: TextView
-    private lateinit var tvLegacyBanner: TextView
+    private lateinit var tvLegacyBanner: TextView  // shown when any field has an unrecognised code
     private lateinit var btnAddToWardrobe: Button
     private lateinit var btnCamera: Button
     private lateinit var layoutResults: LinearLayout
 
     private var nfcAdapter: NfcAdapter? = null
+
+    /** Raw pipe-separated tag string from the last successful scan; used by "Add to Wardrobe". */
     private var lastScannedRaw: String? = null
 
+    /**
+     * Set by MainActivity after CameraFragment (Source.CARE) returns results.
+     * Consumed once in [onCreateView]; null after first use to avoid re-displaying.
+     */
     var pendingVisionResults: Map<String, String>? = null
+
+    // All lookup tables use `get()` properties so getString() is called after
+    // fragment attach, not at class initialisation time when context is unavailable.
 
     private val typeCodeToName get() = mapOf(
         "SH" to getString(R.string.type_shirt),   "TS" to getString(R.string.type_tshirt),
@@ -46,6 +72,7 @@ class CareFragment : Fragment() {
         "AN" to getString(R.string.pattern_animal)
     )
 
+    /** Multi-code formality combos checked before single codes in [decodeValue]. */
     private val formalityComboToName get() = mapOf(
         "SC" to getString(R.string.formality_smart_casual),
         "BC" to getString(R.string.formality_business_casual),
@@ -62,6 +89,11 @@ class CareFragment : Fragment() {
         "SU" to getString(R.string.season_summer), "A"  to getString(R.string.season_autumn),
         "AS" to getString(R.string.season_all)
     )
+
+    /**
+     * Season codes ordered longest-first so the greedy prefix parser in [decodeSeason]
+     * matches "SP"/"SU"/"AS" before consuming "S"/"A" prematurely.
+     */
     private val seasonCodesByLength = listOf("AS", "SP", "SU", "W", "A")
 
     override fun onCreateView(
@@ -86,12 +118,16 @@ class CareFragment : Fragment() {
             (activity as? MainActivity)?.openCamera(CameraFragment.Source.CARE)
         }
 
+        // Apply camera vision results if they arrived before the view was created.
+        // Cleared immediately to prevent re-display on fragment recreation.
         pendingVisionResults?.let { results ->
             displayVisionResults(results)
             pendingVisionResults = null
         }
 
         btnAddToWardrobe.setOnClickListener {
+            // Pass raw tag string so WardrobeFragment can store the full payload.
+            // Empty string signals a camera-only result with no NFC raw data.
             val raw = lastScannedRaw ?: run {
                 (activity as? MainActivity)?.addToWardrobe("")
                 return@setOnClickListener
@@ -102,13 +138,24 @@ class CareFragment : Fragment() {
         return view
     }
 
+    /** Entry point called by [MainActivity] when an NFC tag is detected on this tab. */
     fun onTagDiscovered(tag: Tag) { readTag(tag) }
 
+    /**
+     * Makes the "Add to Wardrobe" button visible without requiring a real tag scan.
+     * Called by [TutorialManager] to expose the button during the tutorial step
+     * that demonstrates adding to wardrobe.
+     */
     fun showAddToWardrobeForTutorial() {
         btnAddToWardrobe.visibility = View.VISIBLE
         btnAddToWardrobe.contentDescription = getString(R.string.btn_add_to_wardrobe)
     }
 
+    /**
+     * Renders camera analysis results using the same card layout as a tag scan.
+     * Wraps the field map in a synthetic raw string so [parseTagData] can be reused.
+     * The "N:Camera Result" prefix satisfies the minimum LexaWEAR payload contract.
+     */
     fun displayVisionResults(fields: Map<String, String>) {
         if (fields.isEmpty()) {
             updateStatus(getString(R.string.care_camera_no_results))
@@ -120,6 +167,8 @@ class CareFragment : Fragment() {
             "C"  to getString(R.string.field_dry_clean),"T"  to getString(R.string.field_type),
             "CL" to getString(R.string.field_color),    "P"  to getString(R.string.field_pattern)
         )
+        // Synthesise a fake raw string so parseTagData can decode vision fields
+        // without duplicating the decode logic.
         val fakeRaw = fields.entries.joinToString("|") { "${it.key}:${it.value}" }
         val parsed  = parseTagData("N:Camera Result|$fakeRaw")
         requireActivity().runOnUiThread {
@@ -133,6 +182,11 @@ class CareFragment : Fragment() {
         }
     }
 
+    /**
+     * Reads the NDEF payload from a discovered tag and renders its care info.
+     * Validates that the tag is a LexaWEAR tag before displaying anything.
+     * Stores [lastScannedRaw] so "Add to Wardrobe" can pass the full payload.
+     */
     private fun readTag(tag: Tag) {
         try {
             val ndef = Ndef.get(tag)
@@ -149,8 +203,10 @@ class CareFragment : Fragment() {
                     tvStatus.announceForAccessibility(getString(R.string.tag_empty_write))
                 }; return
             }
+            // Drop the 3-byte NDEF language prefix before parsing field pairs.
             val raw = message.records.filter { it.tnf == NdefRecord.TNF_WELL_KNOWN }
                 .mapNotNull { String(it.payload).drop(3) }.joinToString("")
+            // "N:" is the minimum marker identifying a LexaWEAR tag.
             if (!raw.contains("N:")) {
                 requireActivity().runOnUiThread {
                     updateStatus(getString(R.string.tag_not_lexawear))
@@ -165,6 +221,7 @@ class CareFragment : Fragment() {
                 btnAddToWardrobe.visibility = View.VISIBLE
                 btnAddToWardrobe.contentDescription =
                     getString(R.string.btn_add_named_description, name)
+                // Announce all fields in one TalkBack utterance plus any legacy warning.
                 val announcement = parsed.fields.entries.joinToString(". ") { "${it.key}: ${it.value.display}" }
                 val legacyNote   = if (parsed.hasLegacy) " ${getString(R.string.care_legacy_warning)}" else ""
                 tvStatus.announceForAccessibility("Tag read. $announcement.$legacyNote")
@@ -175,14 +232,22 @@ class CareFragment : Fragment() {
         }
     }
 
+    /** Pairs a decoded display string with a flag indicating whether the code was unrecognised. */
     private data class FieldValue(val display: String, val isLegacy: Boolean)
+
+    /** Result of [parseTagData]: ordered field map plus a top-level legacy flag. */
     private data class ParsedTag(val fields: LinkedHashMap<String, FieldValue>, val hasLegacy: Boolean)
 
+    /**
+     * Decodes a single raw field code to a display string.
+     * Returns [FieldValue.isLegacy] = true for any unrecognised code so the
+     * caller can show the legacy banner and ⚠ prefix.
+     */
     private fun decodeValue(key: String, value: String): FieldValue = when (key) {
         "T"  -> typeCodeToName[value.uppercase()]
             ?.let { FieldValue(it, false) } ?: FieldValue(value, true)
         "CL" -> {
-            // Use ColorPalette for exact match; nearest-match for legacy off-palette hex.
+            // ColorPalette for exact match; nearest-match fallback for off-palette legacy hex.
             val name = ColorPalette.nameForHex(value, ::getString)
             if (name != null) {
                 FieldValue(name, false)
@@ -191,12 +256,14 @@ class CareFragment : Fragment() {
                     val argb = android.graphics.Color.parseColor("#$value")
                     getString(ColorPalette.nearestEntryFromArgb(argb).nameRes)
                 } catch (e: Exception) { null }
+                // Nearest match still flagged legacy — the stored hex was off-palette.
                 if (nearest != null) FieldValue(nearest, true) else FieldValue(value, true)
             }
         }
         "P"  -> patternCodeToName[value.uppercase()]
             ?.let { FieldValue(it, false) } ?: FieldValue(value, true)
         "F"  -> {
+            // Combo codes (SC/BC/SF) checked before single-letter codes to avoid partial matches.
             val v    = value.uppercase()
             val name = formalityComboToName[v] ?: formalitySingleToName[v]
             if (name != null) FieldValue(name, false) else FieldValue(value, true)
@@ -204,7 +271,7 @@ class CareFragment : Fragment() {
         "SE" -> decodeSeason(value)
         "S"  -> when (value) {
             "OS" -> FieldValue(getString(R.string.one_size), false)
-            else -> FieldValue(value, false)
+            else -> FieldValue(value, false)  // numeric / waist-inseam sizes stored as-is
         }
         "W"  -> {
             val name = when (value) {
@@ -241,11 +308,19 @@ class CareFragment : Fragment() {
         else -> FieldValue(value, false)
     }
 
+    /**
+     * Decodes a season value, handling both single codes ("W") and
+     * concatenated multi-season codes ("WSP" → "Winter/Spring").
+     * Uses greedy longest-first matching to avoid short-code false matches.
+     * Returns isLegacy = true if the value cannot be fully parsed.
+     */
     private fun decodeSeason(value: String): FieldValue {
         val v = value.uppercase()
+        // Direct lookup first — most tags will have a single season code.
         seasonSingleToName[v]?.let { return FieldValue(it, false) }
         val parts = mutableListOf<String>(); var remaining = v
         while (remaining.isNotEmpty()) {
+            // seasonCodesByLength ordered longest-first — must not reorder.
             val match = seasonCodesByLength.firstOrNull { remaining.startsWith(it) }
                 ?: return FieldValue(value, true)
             parts.add(seasonSingleToName[match] ?: return FieldValue(value, true))
@@ -254,6 +329,11 @@ class CareFragment : Fragment() {
         return FieldValue(parts.joinToString("/"), false)
     }
 
+    /**
+     * Parses a raw pipe-separated tag string into an ordered [ParsedTag].
+     * Keys not present in [labelMap] are silently skipped (e.g. internal or
+     * future fields). Sets [ParsedTag.hasLegacy] if any field is unrecognised.
+     */
     private fun parseTagData(raw: String): ParsedTag {
         val labelMap = mapOf(
             "N"  to getString(R.string.field_item),      "T"  to getString(R.string.field_type),
@@ -270,6 +350,7 @@ class CareFragment : Fragment() {
             val label = labelMap[key]
             if (label != null && value.isNotEmpty()) {
                 val decoded = decodeValue(key, value)
+                // Bubble up legacy flag so the banner is shown if any single field is unrecognised.
                 if (decoded.isLegacy) anyLegacy = true
                 result[label] = decoded
             }
@@ -277,6 +358,12 @@ class CareFragment : Fragment() {
         return ParsedTag(result, anyLegacy)
     }
 
+    /**
+     * Renders [parsed] as a vertically stacked list of two-column cards.
+     * Legacy fields get a ⚠ prefix in the value column; the whole card's
+     * contentDescription includes "Old format." so TalkBack users are warned.
+     * The legacy banner is shown/hidden based on [ParsedTag.hasLegacy].
+     */
     private fun displayCareInfo(parsed: ParsedTag) {
         layoutResults.removeAllViews()
         if (parsed.fields.isEmpty()) { updateStatus(getString(R.string.care_no_data)); return }
@@ -296,13 +383,16 @@ class CareFragment : Fragment() {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
                 ).apply { setMargins(0, 0, 0, 12) }
+                // Card-level description read as a unit by TalkBack; child TextViews excluded below.
                 contentDescription = if (fv.isLegacy) "$label: ${fv.display}. Old format." else "$label: ${fv.display}"
             }
+            // Label column — hidden from accessibility; card contentDescription covers the full row.
             card.addView(TextView(requireContext()).apply {
                 text = label; textSize = 15f; setTextColor(0xFF607D8B.toInt())
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.4f)
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             })
+            // Value column — ⚠ prefix added for legacy values as a visual cue to match TalkBack.
             card.addView(TextView(requireContext()).apply {
                 text = if (fv.isLegacy) "⚠ ${fv.display}" else fv.display
                 textSize = 16f
@@ -317,11 +407,13 @@ class CareFragment : Fragment() {
         }
     }
 
+    /** Returns true when the system is in dark mode; used to pick text colour for value cards. */
     private fun isDarkMode(): Boolean {
         val flags = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
         return flags == android.content.res.Configuration.UI_MODE_NIGHT_YES
     }
 
+    /** Posts a status message and sets contentDescription for TalkBack. */
     private fun updateStatus(message: String) {
         tvStatus.text = message; tvStatus.contentDescription = "Status: $message"
     }

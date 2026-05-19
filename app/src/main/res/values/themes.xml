@@ -1,8 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
+
+<!--
+    themes.xml — Application theme definition.
+
+    Extends MaterialComponents.DayNight.NoActionBar so:
+      - Light/dark mode switches automatically with system setting.
+      - No action bar — MainActivity uses the bottom navigation bar only.
+      - Material theme attributes (?attr/colorSurface, ?attr/colorOnSurface,
+        ?attr/colorControlNormal etc.) are available to all drawables and layouts.
+
+    colorPrimary (#1565C0 — Royal Blue) is used for:
+      - result_background.xml and status_background.xml border stroke
+      - ?attr/colorPrimary text colour in item_wardrobe.xml hint line
+      - tv_camera_mode background (#AA1565C0, semi-transparent) in fragment_camera.xml
+
+    colorPrimaryVariant is the darker shade used by Material for pressed/ripple states.
+
+    Surface, background, and control colours are not overridden here —
+    they are inherited from DayNight and adapt automatically to light/dark mode.
+-->
+
 <resources>
     <style name="Theme.LexaWEAR" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Royal Blue — primary brand colour; see usages above -->
         <item name="colorPrimary">#1565C0</item>
+        <!-- Darker blue — used by Material for pressed states and ripple -->
         <item name="colorPrimaryVariant">#003c8f</item>
+        <!-- White text/icons on primary-coloured surfaces -->
         <item name="colorOnPrimary">#FFFFFF</item>
     </style>
 </resources>
