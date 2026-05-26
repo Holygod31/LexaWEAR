@@ -28,18 +28,17 @@ import java.util.Locale
 /**
  * NfcFragment — guided multi-step form for writing clothing data to NFC tags.
  *
- * Walks the user through 14 fields (name → notes). Each step shows either a
+ * Walks the user through fields (name → notes). Each step shows either a
  * free-text input or a list of option buttons depending on the field type.
  * Vision results from CameraFragment can pre-fill answers before the user
  * starts stepping through. On reaching the final step, a summary is shown
  * and the user taps "Write" then holds a tag to the device to commit.
  *
- * Also handles tag-read-before-write: if an NFC tag is detected while
- * [isWriting] is false, its existing data is offered for editing.
+ * Material flow: MB (blend/single) → M (primary) → M2 (secondary, blend only).
+ * M2 is hidden from the step list if MB == "S". Final tag stores M:CO or M:CO+PL.
  */
 class NfcFragment : Fragment() {
 
-    // Views — lateinit to avoid null checks; all bound in onCreateView.
     private lateinit var tvStatus: TextView
     private lateinit var tvStepIndicator: TextView
     private lateinit var tvQuestion: TextView
@@ -75,9 +74,9 @@ class NfcFragment : Fragment() {
     private var isEditingExistingTag = false
 
     /**
-     * Ordered list of all form steps.
-     * `get()` property ensures string resources are resolved after fragment attach,
-     * not at class initialisation time when context may be unavailable.
+     * Full ordered step list including material blend sub-steps.
+     * MB = blend/single choice, M = primary material, M2 = secondary material.
+     * get() property ensures string resources are resolved after fragment attach.
      */
     private val steps get() = listOf(
         Step("N",  getString(R.string.step_q_name),      getString(R.string.step_h_name)),
@@ -87,7 +86,9 @@ class NfcFragment : Fragment() {
         Step("S",  getString(R.string.step_q_size),      getString(R.string.step_h_size)),
         Step("F",  getString(R.string.step_q_formality), getString(R.string.step_h_formality)),
         Step("SE", getString(R.string.step_q_season),    getString(R.string.step_h_season)),
+        Step("MB", getString(R.string.step_q_material_blend), getString(R.string.step_h_material_blend)),
         Step("M",  getString(R.string.step_q_material),  getString(R.string.step_h_material)),
+        Step("M2", getString(R.string.step_q_material2), getString(R.string.step_h_material2)),
         Step("W",  getString(R.string.step_q_wash),      getString(R.string.step_h_wash)),
         Step("D",  getString(R.string.step_q_dry),       getString(R.string.step_h_dry)),
         Step("I",  getString(R.string.step_q_iron),      getString(R.string.step_h_iron)),
@@ -104,11 +105,11 @@ class NfcFragment : Fragment() {
     data class Step(val key: String, val question: String, val hint: String)
 
     /** Steps that show option buttons rather than a free-text field. */
-    private val enumeratedKeys = setOf("T", "CL", "P", "S", "F", "SE", "W", "D", "I", "B", "C")
+    private val enumeratedKeys = setOf("T", "CL", "P", "S", "F", "SE", "MB", "M", "M2", "W", "D", "I", "B", "C")
 
     /**
      * Colour options sourced exclusively from [ColorPalette] — single source of truth.
-     * `get()` property so string resources are resolved at call time, not init time.
+     * get() property so string resources are resolved at call time, not init time.
      */
     private val colorOptions get(): LinkedHashMap<String, String> {
         val map = linkedMapOf<String, String>()
@@ -116,18 +117,17 @@ class NfcFragment : Fragment() {
         return map
     }
 
-    // All lookup tables below use `get()` for the same reason as colorOptions —
-    // getString() requires an attached context and must not be called at init time.
+    // All lookup tables use get() — getString() requires attached context, not safe at init time.
 
     private val typeCodeToName get() = linkedMapOf(
-        "SH" to getString(R.string.type_shirt),   "TS" to getString(R.string.type_tshirt),
-        "JK" to getString(R.string.type_jacket),  "CT" to getString(R.string.type_coat),
-        "SW" to getString(R.string.type_sweater), "HD" to getString(R.string.type_hoodie),
-        "BZ" to getString(R.string.type_blazer),  "SU" to getString(R.string.type_suit),
-        "VS" to getString(R.string.type_vest),    "DR" to getString(R.string.type_dress),
+        "SH" to getString(R.string.type_shirt),    "TS" to getString(R.string.type_tshirt),
+        "JK" to getString(R.string.type_jacket),   "CT" to getString(R.string.type_coat),
+        "SW" to getString(R.string.type_sweater),  "HD" to getString(R.string.type_hoodie),
+        "BZ" to getString(R.string.type_blazer),   "SU" to getString(R.string.type_suit),
+        "VS" to getString(R.string.type_vest),     "DR" to getString(R.string.type_dress),
         "UW" to getString(R.string.type_underwear),"PT" to getString(R.string.type_pants),
-        "JN" to getString(R.string.type_jeans),   "ST" to getString(R.string.type_shorts),
-        "SK" to getString(R.string.type_skirt),   "SC" to getString(R.string.type_socks)
+        "JN" to getString(R.string.type_jeans),    "ST" to getString(R.string.type_shorts),
+        "SK" to getString(R.string.type_skirt),    "SC" to getString(R.string.type_socks)
     )
 
     private val patternCodeToName get() = linkedMapOf(
@@ -139,13 +139,12 @@ class NfcFragment : Fragment() {
     )
 
     private val formalitySingleToName get() = linkedMapOf(
-        "C"  to getString(R.string.formality_casual),         "B"  to getString(R.string.formality_business),
-        "F"  to getString(R.string.formality_formal),         "S"  to getString(R.string.formality_sport),
-        "L"  to getString(R.string.formality_lounge),         "SC" to getString(R.string.formality_smart_casual),
-        "BC" to getString(R.string.formality_business_casual),"SF" to getString(R.string.formality_smart_formal)
+        "C"  to getString(R.string.formality_casual),          "B"  to getString(R.string.formality_business),
+        "F"  to getString(R.string.formality_formal),          "S"  to getString(R.string.formality_sport),
+        "L"  to getString(R.string.formality_lounge),          "SC" to getString(R.string.formality_smart_casual),
+        "BC" to getString(R.string.formality_business_casual), "SF" to getString(R.string.formality_smart_formal)
     )
 
-    /** Multi-code formality combos decoded for display in [decode] and the summary screen. */
     private val formalityComboToName get() = mapOf(
         "SC" to getString(R.string.formality_smart_casual),
         "BC" to getString(R.string.formality_business_casual),
@@ -158,18 +157,56 @@ class NfcFragment : Fragment() {
         "AS" to getString(R.string.season_all)
     )
 
-    /**
-     * Season codes ordered longest-first so the greedy prefix parser in [decode]
-     * matches "SP"/"SU"/"AS" before consuming "S"/"A" prematurely.
-     */
     private val seasonCodesByLength = listOf("AS", "SP", "SU", "W", "A")
 
     private val sizeOptions get() = linkedMapOf(
-        "XS" to getString(R.string.size_xs), "S" to getString(R.string.size_s),
-        "M"  to getString(R.string.size_m),  "L" to getString(R.string.size_l),
-        "XL" to getString(R.string.size_xl), "XXL" to getString(R.string.size_xxl),
-        "XXXL" to getString(R.string.size_xxxl), "OS" to getString(R.string.one_size),
+        "XS" to getString(R.string.size_xs),   "S"  to getString(R.string.size_s),
+        "M"  to getString(R.string.size_m),    "L"  to getString(R.string.size_l),
+        "XL" to getString(R.string.size_xl),   "XXL" to getString(R.string.size_xxl),
+        "XXXL" to getString(R.string.size_xxxl),"OS" to getString(R.string.one_size),
         "CUSTOM" to getString(R.string.size_custom)
+    )
+
+    /**
+     * Full material list used for primary material step.
+     * Codes are language-neutral and stored on the NFC tag.
+     */
+    private val materialOptions get() = linkedMapOf(
+        "CO" to getString(R.string.material_cotton),
+        "WO" to getString(R.string.material_wool),
+        "LI" to getString(R.string.material_linen),
+        "SI" to getString(R.string.material_silk),
+        "CA" to getString(R.string.material_cashmere),
+        "DO" to getString(R.string.material_down),
+        "PL" to getString(R.string.material_polyester),
+        "NY" to getString(R.string.material_nylon),
+        "AC" to getString(R.string.material_acrylic),
+        "SP" to getString(R.string.material_spandex),
+        "LE" to getString(R.string.material_leather),
+        "DE" to getString(R.string.material_denim),
+        "JE" to getString(R.string.material_jersey),
+        "TW" to getString(R.string.material_tweed),
+        "VE" to getString(R.string.material_velvet),
+        "VI" to getString(R.string.material_viscose),
+        "RA" to getString(R.string.material_rayon)
+    )
+
+    /**
+     * Secondary material list — same as [materialOptions] but excludes the
+     * already-selected primary material so the user can't pick the same one twice.
+     */
+    private val materialOptionsSecondary get(): LinkedHashMap<String, String> {
+        val primary = answers["M"]
+        return linkedMapOf<String, String>().also { map ->
+            materialOptions.forEach { (code, name) ->
+                if (code != primary) map[code] = name
+            }
+        }
+    }
+
+    private val materialBlendOptions get() = linkedMapOf(
+        "S" to getString(R.string.material_single),
+        "B" to getString(R.string.material_blend)
     )
 
     private val washOptions get() = linkedMapOf(
@@ -179,8 +216,8 @@ class NfcFragment : Fragment() {
     )
 
     private val dryOptions get() = linkedMapOf(
-        "A" to getString(R.string.dry_air),    "T" to getString(R.string.dry_tumble),
-        "F" to getString(R.string.dry_flat),   "N" to getString(R.string.dry_no)
+        "A" to getString(R.string.dry_air),   "T" to getString(R.string.dry_tumble),
+        "F" to getString(R.string.dry_flat),  "N" to getString(R.string.dry_no)
     )
 
     private val ironOptions get() = linkedMapOf(
@@ -194,10 +231,14 @@ class NfcFragment : Fragment() {
 
     /** Returns the option map for [key], or null if the step uses free-text input. */
     private fun optionsForKey(key: String): LinkedHashMap<String, String>? = when (key) {
-        "T"  -> typeCodeToName;  "CL" -> colorOptions;   "P"  -> patternCodeToName
-        "S"  -> sizeOptions;     "F"  -> formalitySingleToName
-        "SE" -> seasonSingleToName; "W" -> washOptions;  "D"  -> dryOptions
-        "I"  -> ironOptions;     "B"  -> yesNoOptions;   "C"  -> yesNoOptions
+        "T"  -> typeCodeToName;        "CL" -> colorOptions
+        "P"  -> patternCodeToName;     "S"  -> sizeOptions
+        "F"  -> formalitySingleToName; "SE" -> seasonSingleToName
+        "MB" -> materialBlendOptions;  "M"  -> materialOptions
+        "M2" -> materialOptionsSecondary
+        "W"  -> washOptions;           "D"  -> dryOptions
+        "I"  -> ironOptions;           "B"  -> yesNoOptions
+        "C"  -> yesNoOptions
         else -> null
     }
 
@@ -250,7 +291,6 @@ class NfcFragment : Fragment() {
         showStep(0)
 
         // Apply camera/vision pre-fill before the user starts stepping through.
-        // Cleared immediately so a fragment re-creation doesn't re-apply stale results.
         pendingVisionResults?.let { results ->
             results.forEach { (key, value) ->
                 if (steps.any { it.key == key }) answers[key] = value
@@ -263,22 +303,31 @@ class NfcFragment : Fragment() {
 
         btnNext.setOnClickListener {
             val key = steps[currentStep].key
-            // Enumerated steps: selection already recorded via button tap; just advance.
             if (key in enumeratedKeys) { answers.remove(key); clearStepError(); advance(); return@setOnClickListener }
             val input = etStepInput.text.toString().trim()
-            // Name is mandatory — block progress if empty.
             if (key == "N" && input.isEmpty()) { showStepError(getString(R.string.write_error_name_required)); return@setOnClickListener }
             if (input.isEmpty()) { answers.remove(key); clearStepError(); advance(); return@setOnClickListener }
             answers[key] = input; clearStepError(); advance()
         }
 
         btnBack.setOnClickListener {
-            if (currentStep > 0) { clearStepError(); currentStep--; showStep(currentStep) }
+            if (currentStep > 0) {
+                clearStepError()
+                currentStep--
+                // Skip back over M2 if not a blend — keep stepping back until a visible step.
+                if (steps[currentStep].key == "M2" && answers["MB"] != "B") currentStep--
+                showStep(currentStep)
+            }
         }
 
         btnSkip.setOnClickListener {
-            // Remove any previously stored answer so skipped fields are omitted from the tag.
-            answers.remove(steps[currentStep].key)
+            val key = steps[currentStep].key
+            // Skipping MB clears both material answers and skips M and M2.
+            if (key == "MB") {
+                answers.remove("MB"); answers.remove("M"); answers.remove("M2")
+                skipToAfterMaterial(); return@setOnClickListener
+            }
+            answers.remove(key)
             etStepInput.setText(""); etCustomSize.setText("")
             clearStepError(); advance()
         }
@@ -298,7 +347,6 @@ class NfcFragment : Fragment() {
         btnConfirmCustomSize.setOnClickListener {
             val raw = etCustomSize.text.toString().trim()
             if (raw.isEmpty()) { showStepError(getString(R.string.write_error_size_empty)); return@setOnClickListener }
-            // Normalise free-text size entry (e.g. "thirty two" → "32", "medium" → "M").
             answers["S"] = interpretSize(raw, raw.lowercase())
             clearStepError(); layoutCustomSize.visibility = View.GONE
             highlightSelectedOption("S", answers["S"]!!); advance()
@@ -311,7 +359,6 @@ class NfcFragment : Fragment() {
                 return@setOnClickListener
             }
             if (isEditingExistingTag) {
-                // Extra confirmation step before overwriting an existing tag's data.
                 AlertDialog.Builder(requireContext())
                     .setTitle(getString(R.string.dialog_overwrite_title))
                     .setMessage(getString(R.string.dialog_overwrite_message))
@@ -331,21 +378,29 @@ class NfcFragment : Fragment() {
         return view
     }
 
+    // ── Step rendering ────────────────────────────────────────────────────────
+
     /**
-     * Renders a single wizard step: updates the indicator, question, and toggles
-     * between the free-text layout and the option-button scroll view.
+     * Renders a single wizard step.
+     * M2 is skipped automatically if MB == "S" (single material, no blend).
      */
     private fun showStep(index: Int) {
         val step = steps[index]
+
+        // Auto-skip M2 if not a blend — jump forward or back as needed.
+        if (step.key == "M2" && answers["MB"] != "B") {
+            if (index > currentStep) advance() else { currentStep--; showStep(currentStep) }
+            return
+        }
+
         tvStepIndicator.text = getString(R.string.step_indicator, index + 1, steps.size)
         tvQuestion.text      = step.question
         clearStepError()
         layoutSummary.visibility = View.GONE; btnWrite.visibility = View.GONE
         layoutCustomSize.visibility = View.GONE
-        // Last step changes label to "Review" so the user knows what pressing it does.
         btnNext.text = if (index == steps.size - 1) getString(R.string.btn_review) else getString(R.string.btn_next)
         btnBack.isEnabled = index > 0; btnBack.alpha = if (index > 0) 1f else 0.4f
-        val canSkip = step.key != "N"   // Name is the only mandatory field — cannot be skipped.
+        val canSkip = step.key != "N"
         btnSkip.isEnabled = canSkip; btnSkip.alpha = if (canSkip) 1f else 0.4f
         btnSkip.visibility = if (canSkip) View.VISIBLE else View.INVISIBLE
         val options = optionsForKey(step.key)
@@ -357,7 +412,6 @@ class NfcFragment : Fragment() {
             etStepInput.hint = step.hint; etStepInput.setText(answers[step.key] ?: "")
             etStepInput.requestFocus()
         }
-        // Combined step + question announcement so TalkBack reads both in one utterance.
         tvQuestion.announceForAccessibility(
             getString(R.string.step_indicator, index + 1, steps.size) + ". ${step.question}"
         )
@@ -365,9 +419,9 @@ class NfcFragment : Fragment() {
     }
 
     /**
-     * Populates [optionsContainer] with one [Button] per option code.
-     * Previously selected option is shown in bold with "selected" appended to
-     * its content description for TalkBack users.
+     * Builds option buttons for a step.
+     * When MB is selected as "S" (single), M2 is skipped in [advance].
+     * When MB is selected as "B" (blend), M2 is shown after M.
      */
     private fun buildOptionButtons(key: String, options: LinkedHashMap<String, String>) {
         optionsContainer.removeAllViews()
@@ -382,21 +436,25 @@ class NfcFragment : Fragment() {
                 contentDescription = if (code == selectedCode) "$label. ${getString(R.string.option_selected)}" else label
                 if (code == selectedCode) setTypeface(typeface, Typeface.BOLD)
                 setOnClickListener {
-                    if (key == "S" && code == "CUSTOM") {
-                        // Custom size: show the inline text entry instead of advancing.
-                        layoutCustomSize.visibility = View.VISIBLE; etCustomSize.requestFocus()
-                        etCustomSize.announceForAccessibility(getString(R.string.size_custom_prompt))
-                    } else { answers[key] = code; clearStepError(); advance() }
+                    when {
+                        key == "S" && code == "CUSTOM" -> {
+                            layoutCustomSize.visibility = View.VISIBLE; etCustomSize.requestFocus()
+                            etCustomSize.announceForAccessibility(getString(R.string.size_custom_prompt))
+                        }
+                        key == "MB" -> {
+                            answers["MB"] = code
+                            // Clear secondary material if switching back to single.
+                            if (code == "S") answers.remove("M2")
+                            clearStepError(); advance()
+                        }
+                        else -> { answers[key] = code; clearStepError(); advance() }
+                    }
                 }
             }
             optionsContainer.addView(btn)
         }
     }
 
-    /**
-     * Visually marks a just-confirmed option as selected without rebuilding all buttons.
-     * Used after custom-size confirmation to bold the matching option in the current list.
-     */
     private fun highlightSelectedOption(key: String, code: String) {
         for (i in 0 until optionsContainer.childCount) {
             val btn = optionsContainer.getChildAt(i) as? Button ?: continue
@@ -409,9 +467,25 @@ class NfcFragment : Fragment() {
         }
     }
 
-    /** Moves to the next step, or shows the summary if all steps are done. */
+    /**
+     * Moves to the next step, skipping M2 if not a blend.
+     * On reaching the last step, shows the summary.
+     */
     private fun advance() {
-        if (currentStep < steps.size - 1) { currentStep++; showStep(currentStep) } else showSummary()
+        if (currentStep < steps.size - 1) {
+            currentStep++
+            // Skip M2 if single material was chosen.
+            if (steps[currentStep].key == "M2" && answers["MB"] != "B") currentStep++
+            if (currentStep < steps.size) showStep(currentStep) else showSummary()
+        } else {
+            showSummary()
+        }
+    }
+
+    /** Jumps past all three material steps — used when MB is skipped entirely. */
+    private fun skipToAfterMaterial() {
+        currentStep = steps.indexOfFirst { it.key == "W" }
+        clearStepError(); showStep(currentStep)
     }
 
     private fun showStepError(message: String) {
@@ -421,17 +495,11 @@ class NfcFragment : Fragment() {
 
     private fun clearStepError() { tvStepError.text = ""; tvStepError.visibility = View.GONE }
 
-    /**
-     * Entry point called by [MainActivity] when an NFC tag is detected.
-     * Routes to write or read-for-edit depending on [isWriting].
-     */
+    // ── NFC ───────────────────────────────────────────────────────────────────
+
+    /** Entry point called by [MainActivity] when an NFC tag is detected. */
     fun onTagDiscovered(tag: Tag) { if (isWriting) writeTag(tag) else readTagForEdit(tag) }
 
-    /**
-     * Reads an existing tag and offers to load its data for editing.
-     * Validates that the tag contains a LexaWEAR payload (must contain "N:").
-     * If current [answers] are non-empty, warns the user they will be discarded.
-     */
     private fun readTagForEdit(tag: Tag) {
         try {
             val ndef = Ndef.get(tag)
@@ -448,10 +516,8 @@ class NfcFragment : Fragment() {
                     tvStatus.announceForAccessibility(getString(R.string.write_tag_empty_answer))
                 }; return
             }
-            // Drop the 3-byte NDEF language prefix before parsing field pairs.
             val raw = message.records.filter { it.tnf == NdefRecord.TNF_WELL_KNOWN }
                 .mapNotNull { String(it.payload).drop(3) }.joinToString("")
-            // "N:" is the minimum marker that identifies a LexaWEAR tag.
             if (!raw.contains("N:")) {
                 requireActivity().runOnUiThread {
                     updateStatus(getString(R.string.tag_not_lexawear))
@@ -465,10 +531,19 @@ class NfcFragment : Fragment() {
                     .setTitle(getString(R.string.dialog_tag_found_title)).setMessage(msg)
                     .setPositiveButton(getString(R.string.dialog_load)) { _, _ ->
                         answers.clear()
-                        // Parse pipe-separated "KEY:VALUE" pairs from raw tag payload.
                         raw.split("|").forEach { part ->
                             val k = part.substringBefore(":"); val v = part.substringAfter(":")
                             if (v.isNotEmpty() && steps.any { it.key == k }) answers[k] = v
+                        }
+                        // Reconstruct MB and M2 from stored M field if it contains a blend.
+                        val mVal = answers["M"]
+                        if (mVal != null && mVal.contains("+")) {
+                            val parts = mVal.split("+")
+                            answers["MB"] = "B"
+                            answers["M"]  = parts[0]
+                            answers["M2"] = parts[1]
+                        } else if (mVal != null) {
+                            answers["MB"] = "S"
                         }
                         isEditingExistingTag = true; currentStep = 0; showStep(0)
                         updateStatus(getString(R.string.write_tag_loaded))
@@ -481,25 +556,22 @@ class NfcFragment : Fragment() {
         }
     }
 
-    /**
-     * Populates the summary scroll view with human-readable decoded values
-     * and makes the Write button visible.
-     */
     private fun showSummary() {
         layoutSummary.visibility = View.VISIBLE; btnWrite.visibility = View.VISIBLE
         scrollOptions.visibility = View.GONE; layoutFreeText.visibility = View.GONE
         btnNext.text = getString(R.string.btn_next)
         val labelMap = mapOf(
-            "N" to getString(R.string.field_item),     "T"  to getString(R.string.field_type),
-            "CL" to getString(R.string.field_color),   "P"  to getString(R.string.field_pattern),
-            "S"  to getString(R.string.field_size),    "F"  to getString(R.string.field_formality),
-            "SE" to getString(R.string.field_season),  "M"  to getString(R.string.field_material),
-            "W"  to getString(R.string.field_wash),    "D"  to getString(R.string.field_drying),
-            "I"  to getString(R.string.field_ironing), "B"  to getString(R.string.field_bleaching),
-            "C"  to getString(R.string.field_dry_clean),"X" to getString(R.string.field_notes)
+            "N"  to getString(R.string.field_item),      "T"  to getString(R.string.field_type),
+            "CL" to getString(R.string.field_color),     "P"  to getString(R.string.field_pattern),
+            "S"  to getString(R.string.field_size),      "F"  to getString(R.string.field_formality),
+            "SE" to getString(R.string.field_season),    "M"  to getString(R.string.field_material),
+            "W"  to getString(R.string.field_wash),      "D"  to getString(R.string.field_drying),
+            "I"  to getString(R.string.field_ironing),   "B"  to getString(R.string.field_bleaching),
+            "C"  to getString(R.string.field_dry_clean), "X"  to getString(R.string.field_notes)
         )
-        // Only include fields the user actually answered — skipped fields are omitted.
-        val summary = steps.filter { answers[it.key]?.isNotEmpty() == true }
+        // MB and M2 are internal — show combined material in summary under M label.
+        val summarySteps = steps.filter { it.key !in setOf("MB", "M2") }
+        val summary = summarySteps.filter { answers[it.key]?.isNotEmpty() == true }
             .joinToString("\n") { "${labelMap[it.key]}: ${decode(it.key, answers[it.key]!!)}" }
         tvSummary.text = summary
         tvSummary.contentDescription = "${getString(R.string.summary_description)}. $summary."
@@ -507,11 +579,6 @@ class NfcFragment : Fragment() {
         updateStatus(getString(R.string.write_status_review))
     }
 
-    /**
-     * Encodes current [answers] into the pipe-separated tag format.
-     * Skipped fields (no entry in [answers]) are excluded from the output string.
-     * Format: `N:Blue Jacket|T:JK|CL:2196F3|…`
-     */
     private fun writeTag(tag: Tag) {
         try {
             val ndefMessage = NdefMessage(arrayOf(NdefRecord.createTextRecord("en", encodeTagData())))
@@ -520,7 +587,6 @@ class NfcFragment : Fragment() {
                 ndef != null -> { ndef.connect(); ndef.writeNdefMessage(ndefMessage); ndef.close() }
                 ndefFormatable != null -> { ndefFormatable.connect(); ndefFormatable.format(ndefMessage); ndefFormatable.close() }
                 else -> {
-                    // Tag exists but supports neither NDEF nor NdefFormatable — cannot write.
                     requireActivity().runOnUiThread {
                         updateStatus(getString(R.string.tag_cannot_write))
                         tvStatus.announceForAccessibility(getString(R.string.tag_cannot_write))
@@ -530,7 +596,6 @@ class NfcFragment : Fragment() {
             requireActivity().runOnUiThread {
                 updateStatus(getString(R.string.tag_written_success))
                 tvStatus.announceForAccessibility(getString(R.string.tag_written_success))
-                // Full reset after successful write — ready for the next tag.
                 isWriting = false; isEditingExistingTag = false; answers.clear(); currentStep = 0; showStep(0)
             }
         } catch (e: Exception) {
@@ -541,14 +606,31 @@ class NfcFragment : Fragment() {
         }
     }
 
-    /** Serialises [answers] into the canonical pipe-separated tag string. */
-    private fun encodeTagData(): String = steps
-        .filter { answers[it.key]?.isNotEmpty() == true }
-        .joinToString("|") { "${it.key}:${answers[it.key]}" }
+    /**
+     * Serialises answers into the pipe-separated tag string.
+     * M and M2 are combined into a single M field: M:CO or M:CO+PL.
+     * MB is internal only — not written to the tag.
+     */
+    private fun encodeTagData(): String {
+        val encoded = mutableListOf<String>()
+        steps.filter { it.key !in setOf("MB", "M2") }
+            .filter { answers[it.key]?.isNotEmpty() == true }
+            .forEach { step ->
+                if (step.key == "M") {
+                    val primary = answers["M"] ?: return@forEach
+                    val secondary = answers["M2"]
+                    val value = if (!secondary.isNullOrEmpty()) "$primary+$secondary" else primary
+                    encoded.add("M:$value")
+                } else {
+                    encoded.add("${step.key}:${answers[step.key]}")
+                }
+            }
+        return encoded.joinToString("|")
+    }
 
     /**
-     * Translates a stored code back into a display string for the summary screen.
-     * Uses language-neutral codes on the tag; names are always resolved at display time.
+     * Decodes a stored code to a display string for the summary screen.
+     * M field handles both single (CO) and blend (CO+PL) formats.
      */
     private fun decode(key: String, value: String): String = when (key) {
         "T"  -> typeCodeToName[value.uppercase()] ?: value
@@ -560,11 +642,9 @@ class NfcFragment : Fragment() {
         "F"  -> formalityComboToName[value.uppercase()] ?: formalitySingleToName[value.uppercase()] ?: value
         "SE" -> {
             val v = value.uppercase()
-            // Try direct lookup first; fall back to greedy prefix parse for combined seasons.
             seasonSingleToName[v] ?: run {
                 val parts = mutableListOf<String>(); var remaining = v
                 while (remaining.isNotEmpty()) {
-                    // seasonCodesByLength ordered longest-first to avoid short-code false matches.
                     val match = seasonCodesByLength.firstOrNull { remaining.startsWith(it) } ?: return@run value
                     parts.add(seasonSingleToName[match] ?: return@run value)
                     remaining = remaining.removePrefix(match)
@@ -573,6 +653,17 @@ class NfcFragment : Fragment() {
             }
         }
         "S"  -> if (value == "OS") getString(R.string.one_size) else value
+        "M"  -> {
+            // Decode single or blend material for display.
+            if (value.contains("+")) {
+                val parts = value.split("+")
+                val p1 = materialOptions[parts[0]] ?: parts[0]
+                val p2 = materialOptions[parts[1]] ?: parts[1]
+                "$p1 + $p2"
+            } else {
+                materialOptions[value] ?: value
+            }
+        }
         "W"  -> when (value) {
             "30" -> getString(R.string.wash_30); "40" -> getString(R.string.wash_40)
             "60" -> getString(R.string.wash_60); "H"  -> getString(R.string.wash_hand)
@@ -591,17 +682,11 @@ class NfcFragment : Fragment() {
         else -> value
     }
 
-    /**
-     * Normalises a free-text size entry into a canonical size code.
-     * Handles: standard labels (XS–XXXL), numeric values (32, 32/34),
-     * word numbers ("thirty two"), and "one size" / "OS" variants.
-     */
     private fun interpretSize(rawInput: String, normalized: String): String {
         val s = normalized.replace("-", " ").replace(",", " ")
         if (listOf("one size","free size","onesize","freesize").any { it in s }) return "OS"
         if (Regex("\\bos\\b").containsMatchIn(s)) return "OS"
         val w = wordsToDigits(s)
-        // Waist/inseam pattern — store as-is (e.g. "32/34").
         Regex("(\\d{2,3})\\s*(?:/|x|by)\\s*(\\d{2,3})").find(w)
             ?.let { return "${it.groupValues[1]}/${it.groupValues[2]}" }
         listOf(
@@ -613,16 +698,10 @@ class NfcFragment : Fragment() {
             Regex("\\bm\\b|\\bmedium\\b")                         to "M",
             Regex("\\bs\\b|\\bsmall\\b")                          to "S"
         ).forEach { (pattern, code) -> if (pattern.containsMatchIn(w)) return code }
-        // Fallback: accept any 2–3 digit number as a numeric size.
         Regex("\\b(\\d{2,3})\\b").find(w)?.let { return it.groupValues[1] }
         return rawInput
     }
 
-    /**
-     * Converts English number words to digit strings so [interpretSize] can
-     * parse spoken input like "thirty two" → "32".
-     * Handles tens + ones combinations (e.g. "forty four" → "44").
-     */
     private fun wordsToDigits(input: String): String {
         val ones = mapOf("zero" to 0,"one" to 1,"two" to 2,"three" to 3,"four" to 4,
             "five" to 5,"six" to 6,"seven" to 7,"eight" to 8,"nine" to 9,"ten" to 10,
@@ -635,7 +714,6 @@ class NfcFragment : Fragment() {
         while (i < tokens.size) {
             val t = tokens[i]; val tenVal = tens[t]
             if (tenVal != null) {
-                // Check if the next token is a ones digit to combine (e.g. "thirty" + "two" → 32).
                 val onesVal = ones[tokens.getOrNull(i + 1)]
                 if (onesVal != null && onesVal in 1..9) { out.add((tenVal + onesVal).toString()); i += 2; continue }
                 out.add(tenVal.toString()); i++; continue

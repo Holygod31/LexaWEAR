@@ -217,7 +217,7 @@
     <string name="pattern_camouflage">Camouflage</string>
     <string name="pattern_animal">Imprimé animal</string>
 
-    <!-- Colours — full 40+ palette -->
+    <!-- Colours -->
     <string name="color_dark_red">Rouge foncé</string>
     <string name="color_red">Rouge</string>
     <string name="color_crimson">Cramoisi</string>
@@ -280,6 +280,30 @@
     <string name="season_autumn">Automne</string>
     <string name="season_all">Toutes saisons</string>
 
+    <!-- ── Matières ────────────────────────────────────────────────────────── -->
+    <!-- Noms d\'affichage pour les codes de matière stockés sur les tags -->
+    <!-- Choix matière unique ou mélange -->
+    <string name="material_single">Matière unique</string>
+    <string name="material_blend">Mélange (deux matières)</string>
+    <!-- Matières individuelles -->
+    <string name="material_cotton">Coton</string>
+    <string name="material_wool">Laine</string>
+    <string name="material_linen">Lin</string>
+    <string name="material_silk">Soie</string>
+    <string name="material_cashmere">Cachemire</string>
+    <string name="material_down">Duvet</string>
+    <string name="material_polyester">Polyester</string>
+    <string name="material_nylon">Nylon</string>
+    <string name="material_acrylic">Acrylique</string>
+    <string name="material_spandex">Spandex</string>
+    <string name="material_leather">Cuir</string>
+    <string name="material_denim">Denim</string>
+    <string name="material_jersey">Jersey</string>
+    <string name="material_tweed">Tweed</string>
+    <string name="material_velvet">Velours</string>
+    <string name="material_viscose">Viscose</string>
+    <string name="material_rayon">Rayonne</string>
+
     <!-- Write step questions -->
     <string name="step_q_name">Comment s\'appelle cet article ?</string>
     <string name="step_q_type">Quel type de vêtement est-ce ?</string>
@@ -288,7 +312,9 @@
     <string name="step_q_size">Quelle est la taille ?</string>
     <string name="step_q_formality">Quel est le niveau de formalité ?</string>
     <string name="step_q_season">Pour quelle saison est-il ?</string>
-    <string name="step_q_material">En quelle matière est-il ?</string>
+    <string name="step_q_material_blend">Cet article est-il en matière unique ou en mélange ?</string>
+    <string name="step_q_material">Quelle est la matière principale ?</string>
+    <string name="step_q_material2">Quelle est la matière secondaire ?</string>
     <string name="step_q_wash">À quelle température le laver ?</string>
     <string name="step_q_dry">Comment le sécher ?</string>
     <string name="step_q_iron">Quelles sont les instructions de repassage ?</string>
@@ -304,7 +330,9 @@
     <string name="step_h_size">Choisissez une taille ou saisissez une taille personnalisée</string>
     <string name="step_h_formality">Choisissez dans la liste ci-dessous</string>
     <string name="step_h_season">Choisissez dans la liste ci-dessous</string>
-    <string name="step_h_material">ex. Coton, Laine, Polyester</string>
+    <string name="step_h_material_blend">Choisissez dans la liste ci-dessous</string>
+    <string name="step_h_material">Choisissez dans la liste ci-dessous</string>
+    <string name="step_h_material2">Choisissez dans la liste ci-dessous</string>
     <string name="step_h_wash">Choisissez dans la liste ci-dessous</string>
     <string name="step_h_dry">Choisissez dans la liste ci-dessous</string>
     <string name="step_h_iron">Choisissez dans la liste ci-dessous</string>
