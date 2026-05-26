@@ -219,6 +219,7 @@ class MainActivity : AppCompatActivity() {
     /**
      * Called by [CameraFragment] when analysis is complete.
      * Restores the bottom nav and routes the result fields to the originating fragment.
+     * Uses menu.findItem instead of selectedItemId to avoid triggering the nav listener.
      *
      * @param fields  Map of LexaWEAR field codes → values (e.g. "T" → "JK").
      * @param source  Determines which fragment receives the results.
@@ -227,12 +228,13 @@ class MainActivity : AppCompatActivity() {
         bottomNav.visibility = android.view.View.VISIBLE
         when (source) {
             CameraFragment.Source.WRITE -> {
-                bottomNav.selectedItemId = R.id.tab_nfc
+                // Update nav highlight without firing the listener — prevents double fragment load.
+                bottomNav.menu.findItem(R.id.tab_nfc)?.isChecked = true
                 val nfcFragment = NfcFragment().apply { pendingVisionResults = fields }
                 loadFragment(nfcFragment)
             }
             CameraFragment.Source.CARE -> {
-                bottomNav.selectedItemId = R.id.tab_care
+                bottomNav.menu.findItem(R.id.tab_care)?.isChecked = true
                 val careFragment = CareFragment().apply { pendingVisionResults = fields }
                 loadFragment(careFragment)
             }
@@ -242,10 +244,12 @@ class MainActivity : AppCompatActivity() {
     /**
      * Called when the user cancels out of the camera without taking a shot.
      * Restores the bottom nav and returns to the tab that was active before.
+     * Uses menu.findItem instead of selectedItemId to avoid triggering the nav listener.
      */
     fun onCameraCancel() {
         bottomNav.visibility = android.view.View.VISIBLE
-        bottomNav.selectedItemId = preCameraTabId
+        // Update nav highlight without firing the listener — prevents double fragment load.
+        bottomNav.menu.findItem(preCameraTabId)?.isChecked = true
         val fragment = when (preCameraTabId) {
             R.id.tab_care     -> CareFragment()
             R.id.tab_nfc      -> NfcFragment()

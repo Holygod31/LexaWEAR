@@ -51,11 +51,11 @@ class CameraFragment : Fragment() {
     }
 
     private lateinit var previewView: PreviewView
-    private lateinit var tvOverlay: TextView   // live label hint or post-capture summary
-    private lateinit var tvMode: TextView      // current shot mode displayed to sighted users
-    private lateinit var tvStatus: TextView    // status/error line also read by TalkBack
+    private lateinit var tvOverlay: TextView
+    private lateinit var tvMode: TextView
+    private lateinit var tvStatus: TextView
     private lateinit var btnCapture: Button
-    private lateinit var btnCare: Button       // toggles mode OR becomes "Retake" after capture
+    private lateinit var btnCare: Button
     private lateinit var btnCancel: Button
 
     private var imageCapture: ImageCapture? = null
@@ -67,6 +67,7 @@ class CameraFragment : Fragment() {
     /**
      * Guards the live-analysis loop. Set to false on capture to stop frame
      * processing while the still image is being analysed; restored on retake.
+     * Also set to false in onDestroyView to prevent post-destroy callbacks.
      */
     private var liveAnalysisActive = true
 
@@ -101,7 +102,6 @@ class CameraFragment : Fragment() {
         btnCancel   = view.findViewById(R.id.btn_camera_cancel)
 
         careSymbolClassifier = CareSymbolClassifier(requireContext())
-        // Context required so VisionAnalyzer can resolve string resources for labels.
         visionAnalyzer = VisionAnalyzer(careSymbolClassifier, requireContext())
 
         // If launched from the Scan tab, start straight in care-label mode.
@@ -111,7 +111,6 @@ class CameraFragment : Fragment() {
         }
 
         btnCapture.setOnClickListener { captureAndAnalyze() }
-        // Toggle between clothing and care-label modes before first capture.
         btnCare.setOnClickListener { isCareLabelMode = !isCareLabelMode; updateModeUI() }
         btnCancel.setOnClickListener { (activity as? MainActivity)?.onCameraCancel() }
 
@@ -168,17 +167,17 @@ class CameraFragment : Fragment() {
 
             val imageAnalysis = ImageAnalysis.Builder()
                 .setTargetResolution(Size(640, 480))
-                // Drop frames if analyser is busy — prevents queue build-up on slow devices.
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
                 .build()
                 .also { analysis ->
                     analysis.setAnalyzer(cameraExecutor) { imageProxy ->
-                        // Guard check prevents stale frames updating the overlay after capture.
                         if (liveAnalysisActive) {
                             val bitmap = imageProxy.toBitmap()
                             visionAnalyzer.analyzeLiveFrame(bitmap) { label ->
-                                requireActivity().runOnUiThread {
+                                // Use activity? instead of requireActivity() — if the fragment
+                                // is detached by the time this callback fires, skip silently.
+                                activity?.runOnUiThread {
                                     if (liveAnalysisActive) tvOverlay.text = label
                                 }
                             }
@@ -213,7 +212,6 @@ class CameraFragment : Fragment() {
         liveAnalysisActive = false
         btnCapture.isEnabled = false
 
-        // Brief audio cue — confirms capture for blind users without screen feedback.
         playShutterCue()
         updateStatus(getString(R.string.camera_capturing))
 
@@ -226,9 +224,9 @@ class CameraFragment : Fragment() {
                     processCapture(bitmap)
                 }
                 override fun onError(exception: ImageCaptureException) {
-                    requireActivity().runOnUiThread {
+                    // Use activity? to guard against detached fragment on error callback.
+                    activity?.runOnUiThread {
                         updateStatus(getString(R.string.camera_capture_failed, exception.message))
-                        // Restore live analysis so the user can try again.
                         btnCapture.isEnabled = true
                         liveAnalysisActive = true
                     }
@@ -253,11 +251,12 @@ class CameraFragment : Fragment() {
         updateStatus(getString(R.string.camera_analyzing))
         if (isCareLabelMode) {
             visionAnalyzer.analyzeCareLabel(bitmap) { result ->
-                requireActivity().runOnUiThread { handleResult(result) }
+                // Guard against fragment detach between capture and callback.
+                activity?.runOnUiThread { handleResult(result) }
             }
         } else {
             visionAnalyzer.analyzeClothing(bitmap) { result ->
-                requireActivity().runOnUiThread { handleResult(result) }
+                activity?.runOnUiThread { handleResult(result) }
             }
         }
     }
@@ -284,13 +283,12 @@ class CameraFragment : Fragment() {
             return
         }
 
-        val announcements = mutableListOf<String>() // read aloud by TalkBack as a sequence
-        val summaryParts  = mutableListOf<String>() // shown in tvOverlay and tvStatus
+        val announcements = mutableListOf<String>()
+        val summaryParts  = mutableListOf<String>()
 
         // ── Type ──────────────────────────────────────────────────────────────
         val typeCode = result.fields["T"]
         if (typeCode != null) {
-            // Resolve display name from language-neutral type code stored on the tag.
             val typeName = getString(when (typeCode) {
                 "SH" -> R.string.type_shirt;    "TS" -> R.string.type_tshirt
                 "JK" -> R.string.type_jacket;   "CT" -> R.string.type_coat
@@ -306,7 +304,6 @@ class CameraFragment : Fragment() {
             announcements.add(getString(R.string.camera_type_detected, typeName, confidencePct))
             summaryParts.add("${getString(R.string.field_type)}: $typeName ($confidencePct%)")
         } else if (result.typeLowConfidence) {
-            // Confidence below threshold — prompt the user to set the type manually.
             announcements.add(getString(R.string.camera_type_low_confidence))
             summaryParts.add(getString(R.string.camera_type_low_confidence))
         }
@@ -314,7 +311,6 @@ class CameraFragment : Fragment() {
         // ── Colour ────────────────────────────────────────────────────────────
         val colorHex = result.fields["CL"]
         if (colorHex != null) {
-            // ColorPalette is the single source of truth for hex → name resolution.
             val colorName = ColorPalette.nameForHex(colorHex, ::getString)
                 ?: getString(ColorPalette.nearestEntryFromArgb(
                     try { android.graphics.Color.parseColor("#$colorHex") } catch (e: Exception) { 0 }
@@ -338,7 +334,6 @@ class CameraFragment : Fragment() {
 
         // ── Care label fields ─────────────────────────────────────────────────
         if (result.fromCareLabel) {
-            // Decode each care code to a human-readable string for the summary line.
             result.fields.filterKeys { it in setOf("W", "D", "I", "B", "C") }
                 .forEach { (key, code) ->
                     val label = when (key) {
@@ -375,7 +370,6 @@ class CameraFragment : Fragment() {
         val summaryText = summaryParts.joinToString("  ·  ")
         tvOverlay.text  = summaryText
         updateStatus(summaryText)
-        // Announce all fields in one TalkBack utterance, dot-separated for natural pacing.
         tvOverlay.announceForAccessibility(announcements.joinToString(". "))
 
         showResultActions()
@@ -396,7 +390,6 @@ class CameraFragment : Fragment() {
         btnCare.text = getString(R.string.camera_btn_retake)
         btnCare.contentDescription = getString(R.string.camera_btn_retake_description)
         btnCare.setOnClickListener {
-            // Full reset — clear accumulated fields and restore pre-capture button state.
             liveAnalysisActive = true
             accumulatedFields.clear()
             btnCapture.text = getString(R.string.camera_btn_capture)
@@ -421,9 +414,12 @@ class CameraFragment : Fragment() {
 
     // ── Utilities ─────────────────────────────────────────────────────────────
 
-    /** Posts a status message on the main thread; also sets contentDescription for TalkBack. */
+    /**
+     * Posts a status message on the main thread.
+     * Uses activity? to guard against post-detach calls from async callbacks.
+     */
     private fun updateStatus(message: String) {
-        requireActivity().runOnUiThread {
+        activity?.runOnUiThread {
             tvStatus.text = message
             tvStatus.contentDescription = message
         }
@@ -431,7 +427,7 @@ class CameraFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        // Stop live analysis before executor shuts down to prevent post-destroy callbacks.
+        // Stop live analysis first — prevents in-flight callbacks from touching views.
         liveAnalysisActive = false
         cameraExecutor.shutdown()
         careSymbolClassifier.close()
